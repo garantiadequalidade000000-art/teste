@@ -1,144 +1,105 @@
 /**
- * Gera os DANFEs para as NF-e (Mod. 55) carregadas,
- * chamando uma API externa e compactando os PDFs resultantes.
- * * Esta função depende das variáveis globais:
- * - arquivosXML: Array com { fileName, content, mod }
- * - notasFiscais: Array com objetos de nota (para filtro de CNPJ)
- * - filterCNPJ: O elemento <select> do filtro de CNPJ
- * - obterNomeFantasiaPrincipal(): Função auxiliar
- * - obterPeriodoEmissaoPrincipal(): Função auxiliar
- * * E das bibliotecas:
- * - JSZip
+ * Função para chamar a API externa de geração de DANFE (NFe/NFCe).
+ *
+ * Esta função é acionada pelo clique no botão "DANFE" na linha da tabela.
+ * Ela depende que:
+ * 1. Exista um <input id="apiKeyDanfe"> no HTML para ler a API Key.
+ * 2. Exista um array global 'arquivosXML' que armazena objetos contendo
+ * { content: '...conteúdo xml...', chave: '...chave de acesso...' }
+ *
+ * API Endpoint: POST https://consultadanfe.com/CDanfe/api_generate
+ *
+ * @param {Event} event - O evento do clique (para feedback no botão).
+ * @param {string} chave - A chave de acesso da NFe/NFCe passada pelo 'onclick'.
  */
-async function gerarDanfes() {
-    if (arquivosXML.length === 0) {
-        alert("Nenhum arquivo XML foi carregado.");
+async function gerarDanfeAPI(event, chave) {
+    // Previne qualquer comportamento padrão do botão
+    if (event) event.preventDefault();
+
+    // 1. Obter a API Key do campo de input
+    const apiKey = document.getElementById('apiKeyDanfe').value;
+    if (!apiKey || apiKey.trim() === '') {
+        alert("Por favor, insira sua 'API Key (DANFE)' no campo superior antes de gerar um DANFE.");
+        document.getElementById('apiKeyDanfe').focus();
         return;
     }
 
-    const danfeButton = document.getElementById('danfeButton');
-    danfeButton.disabled = true;
-    danfeButton.textContent = '📄 Gerando... (0%)';
-
-    // --- 1. Filtrar Arquivos ---
-    const modFilter = '55'; // Apenas NF-e
-    const cnpjFilter = filterCNPJ.value;
+    // 2. Encontrar o conteúdo XML bruto pela chave
+    // (Assumindo que 'arquivosXML' é uma variável global)
+    const arquivo = arquivosXML.find(arq => arq.chave === chave);
     
-    const arquivosFiltrados = arquivosXML.filter(arq => {
-        // Apenas Mod. 55
-        if (arq.mod !== modFilter) return false;
-        
-        // Se o filtro for 'ALL', não precisa checar CNPJ
-        if (cnpjFilter === 'ALL') return true;
-
-        // Tenta encontrar a nota fiscal correspondente para verificar o CNPJ
-        // (Lógica reutilizada de compactarEBaixarXML)
-        const nota = notasFiscais.find(n => n.chave === arq.content.match(/<chNFe>(\d+)<\/chNFe>|<chNFCE>(\d+)<\/chNFCE>/)?.[1] || n.chave === arq.content.match(/<chNFe>(\d+)<\/chNFe>|<chNFCE>(\d+)<\/chNFCE>/)?.[2]);
-        
-        let matchesCNPJ = true;
-        if (nota && nota.cnpj !== cnpjFilter) {
-            matchesCNPJ = false;
-        }
-        
-        if (!nota) {
-             // Tenta extrair o CNPJ do XML bruto
-             const cnpjMatch = arq.content.match(/<CNPJ>(\d+)<\/CNPJ>/);
-             if (cnpjMatch && cnpjMatch[1] !== cnpjFilter) {
-                 matchesCNPJ = false;
-             } else if (!cnpjMatch && cnpjFilter !== 'ALL') {
-                 // Se não tem nota e não achou CNPJ no XML, e o filtro não é ALL, melhor ignorar.
-                 matchesCNPJ = false; 
-             }
-        }
-        
-        return matchesCNPJ;
-    });
-
-    if (arquivosFiltrados.length === 0) {
-        const cnpjText = cnpjFilter !== 'ALL' ? ` para o CNPJ ${cnpjFilter}` : '';
-        alert(`Nenhuma NF-e (Mod. 55)${cnpjText} foi encontrada para gerar DANFE.`);
-        danfeButton.disabled = false;
-        danfeButton.textContent = '📄 Gerar DANFEs (NF-e)';
+    if (!arquivo || !arquivo.content) {
+        alert(`Erro: Não foi possível encontrar o conteúdo XML para a chave ${chave}. Tente recarregar os arquivos.`);
         return;
     }
+
+    const xmlContent = arquivo.content;
+    const apiUrl = 'https://consultadanfe.com/CDanfe/api_generate';
     
-    // --- 2. Preparar ZIP e API ---
-    const zip = new JSZip();
-    const apiURL = 'https://consultadanfe.com/CDanfe/api_generate';
-    let arquivosProcessados = 0;
-    const totalArquivos = arquivosFiltrados.length;
+    // 3. Mudar o status do botão (Feedback visual para o usuário)
+    const button = event.target;
+    button.disabled = true;
+    button.innerText = 'Gerando...';
 
     try {
-        const promessas = arquivosFiltrados.map(async (arq) => {
-            try {
-                const response = await fetch(apiURL, {
-                    method: 'POST',
-                    headers: {
-                        // Assumindo que a API espera o XML bruto.
-                        'Content-Type': 'application/xml' 
-                    },
-                    body: arq.content
-                });
+        // 4. Montar o payload (Corpo da Requisição)
+        // (ASSUMINDO que a API espera um JSON com 'api_key' e 'xml_content')
+        const payload = {
+            "api_key": apiKey,
+            "xml_content": xmlContent
+        };
 
-                if (!response.ok) {
-                    throw new Error(`API falhou para ${arq.fileName} (Status: ${response.status})`);
-                }
-
-                const pdfBlob = await response.blob();
-                
-                // Define o nome do arquivo PDF
-                const safeFileName = arq.fileName.replace(/[^a-zA-Z0-9.\-]/g, '_').replace(/.xml$/i, '.pdf');
-                
-                // Adiciona o PDF ao ZIP
-                zip.file(safeFileName, pdfBlob);
-
-            } catch (error) {
-                console.error(`Erro ao processar DANFE para ${arq.fileName}:`, error);
-                // Adiciona um log de erros no ZIP
-                zip.file(`ERRO_${arq.fileName}.txt`, `Não foi possível gerar o DANFE. Motivo: ${error.message}`);
-            } finally {
-                // Atualiza o progresso
-                arquivosProcessados++;
-                const percent = Math.round((arquivosProcessados / totalArquivos) * 100);
-                danfeButton.textContent = `📄 Gerando... (${percent}%)`;
-            }
+        // 5. Fazer a chamada POST usando fetch
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
         });
 
-        // Espera todas as chamadas de API terminarem
-        await Promise.all(promessas);
-
-        // --- 3. Gerar e Baixar o ZIP ---
-        danfeButton.textContent = '📦 Compactando...';
-        const content = await zip.generateAsync({ type: "blob" });
-
-        // Define o nome do arquivo ZIP
-        let nomeArquivoZip;
-        if (cnpjFilter === 'ALL') {
-            const periodoEmissao = obterPeriodoEmissaoPrincipal(); 
-            nomeArquivoZip = `DANFEs-NFe-Todos-CNPJs-${periodoEmissao}.zip`;
-        } else {
-            const nomeFantasiaPrincipal = obterNomeFantasiaPrincipal();
-            const periodoEmissao = obterPeriodoEmissaoPrincipal();
-            nomeArquivoZip = `DANFEs-NFe-${nomeFantasiaPrincipal}-${periodoEmissao}_${cnpjFilter}.zip`;
+        // 6. Tratar a resposta
+        if (!response.ok) {
+            // Se a resposta HTTP não for OK (ex: 404, 500)
+            throw new Error(`Erro na API: ${response.status} ${response.statusText}`);
         }
 
-        // Força o download
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(content);
-        link.download = nomeArquivoZip;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(link.href);
-        
-        alert(`Download do arquivo "${nomeArquivoZip}" iniciado com sucesso.`);
+        const data = await response.json();
+
+        // 7. Processar a resposta JSON da API
+        // (ASSUMINDO que a API retorna { "success": true, "pdf_base64": "..." })
+        if (data.success && data.pdf_base64) {
+            
+            // Decodifica o Base64 e força o download do PDF
+            const byteCharacters = atob(data.pdf_base64);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], { type: 'application/pdf' });
+
+            // Cria um link temporário para o download
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `DANFE_${chave}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+            
+        } else {
+            // Se a API retornar sucesso=false ou um erro conhecido
+            throw new Error(data.error || "A API não retornou um PDF válido.");
+        }
 
     } catch (error) {
-        console.error("Erro ao gerar ou baixar o arquivo ZIP de DANFEs:", error);
-        alert("Ocorreu um erro ao tentar gerar e baixar os DANFEs. Verifique o console para mais detalhes.");
+        // Captura erros de rede ou da lógica de tratamento
+        console.error("Erro ao gerar DANFE:", error);
+        alert(`Falha ao gerar o DANFE: \n${error.message}`);
     } finally {
-        // Restaura o botão
-        danfeButton.disabled = false;
-        danfeButton.textContent = '📄 Gerar DANFEs (NF-e)';
+        // 8. Restaurar o botão, independente de sucesso ou falha
+        button.disabled = false;
+        button.innerText = 'DANFE';
     }
 }
