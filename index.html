@@ -424,6 +424,39 @@
             border-bottom: 1px solid var(--cor-principal);
         }
 
+        /* --- NOVO: Otimização para Impressão (DANFE/DANFCE e Relatório) --- */
+        @media print {
+            body {
+                background-color: #fff !important;
+                padding: 0;
+                margin: 0;
+            }
+            #xmlDetailsModal {
+                position: static !important; /* Retira fixed */
+                display: block !important; /* Força a exibição para o print */
+                background-color: #fff !important; /* Fundo branco para print */
+                overflow: visible !important;
+                width: 100%;
+                height: auto;
+                z-index: auto;
+            }
+            .modal-content {
+                width: 95% !important;
+                max-width: none !important;
+                margin: 10px auto !important;
+                border: none; /* Remove borda do modal */
+                box-shadow: none; /* Remove sombra */
+                padding: 0;
+            }
+            .close-button, header, .controls-container, #drop-area, #filter-container, #search-container {
+                display: none !important; /* Oculta elementos não essenciais */
+            }
+            /* Estilos da Tabela no Relatório Principal (PDF) para não cortar */
+            #relatorio-export table { 
+                table-layout: fixed !important; /* Mantém o layout fixo para honrar as larguras otimizadas */
+            }
+        }
+
     </style>
 </head>
 <body>
@@ -780,6 +813,7 @@
                             nota.quebra = 'Sequência OK (Início)';
                             nota.quebraClass = 'sem-quebra';
                         } else {
+                            // Este é o ajuste pedido: Se a primeira nota não é 1, é QUEBRA!
                             nota.quebra = `QUEBRA! Primeira nota deveria ser 1`;
                             nota.quebraClass = 'quebra-indicada';
                         }
@@ -925,7 +959,7 @@
 
             // NOVO: Filtrar as notas pelo CNPJ selecionado (se não for 'ALL')
             const notasParaResumo = notas.filter(n => filterCNPJ.value === 'ALL' || n.cnpj === filterCNPJ.value);
-
+            
             if (notasParaResumo.length === 0 && filterCNPJ.value !== 'ALL') {
                 resumoContainer.innerHTML = `<p>Nenhuma nota fiscal encontrada para o CNPJ ${filterCNPJ.value} para gerar os resumos.</p>`;
                 resumoContainer.style.display = 'flex';
@@ -940,63 +974,110 @@
                     const cfopKey = nota.cfop;
                     resumoCFOP[cfopKey] = resumoCFOP[cfopKey] || { count: 0, total: 0 };
                     resumoCFOP[cfopKey].count++;
-                    resumoCFOP[cfopKey].total += Math.round(nota.valorNumerico * 100);
+                    resumoCFOP[cfopKey].total += Math.round(nota.valorNumerico * 100); 
 
                     // Resumo por Forma de Pagamento (tPag)
                     const pagKey = nota.tPag;
                     resumoPagamento[pagKey] = resumoPagamento[pagKey] || { count: 0, total: 0 };
                     resumoPagamento[pagKey].count++;
-                    resumoPagamento[pagKey].total += Math.round(nota.valorNumerico * 100);
+                    resumoPagamento[pagKey].total += Math.round(nota.valorNumerico * 100); 
                 }
             });
-            
-            // Converte os objetos de resumo para arrays e ordena
+
+            // Converte para array e ordena
             const resumoCFOPArray = Object.entries(resumoCFOP)
                 .map(([cfop, data]) => ({ cfop, count: data.count, total: data.total / 100 }))
-                .sort((a, b) => b.total - a.total); // Ordena por valor total
+                .sort((a, b) => b.total - a.total);
 
             const resumoPagamentoArray = Object.entries(resumoPagamento)
-                .map(([forma, data]) => ({ forma, count: data.count, total: data.total / 100 }))
-                .sort((a, b) => b.total - a.total); // Ordena por valor total
+                .map(([pag, data]) => ({ pag, count: data.count, total: data.total / 100 }))
+                .sort((a, b) => b.total - a.total);
 
-            let htmlResumo = `
-                <div class="resumo-table-container">
-                    <h4>Resumo por CFOP (Notas Autorizadas)</h4>
-                    <table>
-                        <thead>
-                            <tr><th>CFOP</th><th>Qtd</th><th>Valor Total</th></tr>
-                        </thead>
-                        <tbody>
-                            ${resumoCFOPArray.map(item => 
-                                `<tr><td>${item.cfop}</td><td style="text-align: right;">${item.count}</td><td style="text-align: right;">${formatarValor(item.total)}</td></tr>`
-                            ).join('')}
-                        </tbody>
-                    </table>
-                </div>
-                
-                <div class="resumo-table-container">
-                    <h4>Resumo por Forma de Pagamento (Notas Autorizadas)</h4>
-                    <table>
-                        <thead>
-                            <tr><th>Forma Pagamento</th><th>Qtd</th><th>Valor Total</th></tr>
-                        </thead>
-                        <tbody>
-                            ${resumoPagamentoArray.map(item => 
-                                `<tr><td>${item.forma}</td><td style="text-align: right;">${item.count}</td><td style="text-align: right;">${formatarValor(item.total)}</td></tr>`
-                            ).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-            
-            resumoContainer.innerHTML = htmlResumo;
-            resumoContainer.style.display = 'flex';
+
+            // Gera HTML do Resumo
+            let htmlResumo = '';
+
+            // Resumo CFOP
+            if (resumoCFOPArray.length > 0) {
+                const totalCFOP = resumoCFOPArray.reduce((acc, item) => acc + item.total, 0);
+                htmlResumo += `
+                    <div class="resumo-table-container">
+                        <h4>Resumo por CFOP (Notas Autorizadas)</h4>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>CFOP</th>
+                                    <th style="text-align: right;">Qtd.</th>
+                                    <th style="text-align: right;">Valor Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${resumoCFOPArray.map(item => `
+                                    <tr>
+                                        <td>${item.cfop}</td>
+                                        <td style="text-align: right;">${item.count}</td>
+                                        <td style="text-align: right;">${formatarValor(item.total)}</td>
+                                    </tr>
+                                `).join('')}
+                                <tr>
+                                    <th colspan="2">Total Geral</th>
+                                    <th style="text-align: right;">${formatarValor(totalCFOP)}</th>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+
+            // Resumo Pagamento
+            if (resumoPagamentoArray.length > 0) {
+                 const totalPagamento = resumoPagamentoArray.reduce((acc, item) => acc + item.total, 0);
+                htmlResumo += `
+                    <div class="resumo-table-container">
+                        <h4>Resumo por Forma de Pagamento (Notas Autorizadas)</h4>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Forma Pag.</th>
+                                    <th style="text-align: right;">Qtd.</th>
+                                    <th style="text-align: right;">Valor Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${resumoPagamentoArray.map(item => `
+                                    <tr>
+                                        <td>${item.pag}</td>
+                                        <td style="text-align: right;">${item.count}</td>
+                                        <td style="text-align: right;">${formatarValor(item.total)}</td>
+                                    </tr>
+                                `).join('')}
+                                <tr>
+                                    <th colspan="2">Total Geral</th>
+                                    <th style="text-align: right;">${formatarValor(totalPagamento)}</th>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+
+            if (htmlResumo) {
+                resumoContainer.innerHTML = htmlResumo;
+                resumoContainer.style.display = 'flex';
+            } else {
+                resumoContainer.style.display = 'none';
+            }
+        }
+        
+        // --- Aplicação de Filtros e Busca ---
+
+        function limparBusca() {
+            searchInput.value = '';
+            filtrarTabela();
         }
 
-        // --- Funções de Filtro e Busca ---
-
         /**
-         * Aplica filtros de Mod (55/65), Status (Autorizada/Cancelada), e CNPJ.
+         * Aplica todos os filtros selecionados (Mod, Status, CNPJ) e re-executa a busca.
          */
         function aplicarFiltrosRelatorio() {
             const filtroMod = filterMod.value;
@@ -1008,7 +1089,7 @@
             // Se as notas não foram alteradas, apenas chamar gerarRelatorioHTML com os grupos globais e a nova filtragem no HTML deve ser suficiente e mais rápido.
             // Re-gera a parte visual (tabelas e total) com o novo CNPJ
             gerarRelatorioHTML(gruposGlobais); // Vai ignorar grupos que não batem com o filterCNPJ.value
-
+            
             // 2. Recalcula e exibe os resumos se o CNPJ mudar (ou outros filtros, mas o CNPJ é o mais relevante aqui).
             gerarResumos(notasFiscais); 
 
@@ -1025,7 +1106,6 @@
             const filtroMod = filterMod.value;
             const filtroStatus = filterStatus.value;
             const cnpjFilter = filterCNPJ.value; // Pega o CNPJ filtrado no select
-
             let totalGeralFiltrado = 0;
 
             tables.forEach(table => {
@@ -1036,36 +1116,29 @@
                 const modGrupo = tableGroup ? tableGroup.dataset.mod : 'N/A';
                 const cnpjGrupo = tableGroup ? tableGroup.dataset.cnpj : 'N/A'; // Pega o CNPJ do grupo
 
-                // 1. Oculta o grupo se não corresponder ao filtro de CNPJ (já feito em gerarRelatorioHTML, mas garante)
-                if (cnpjFilter !== 'ALL' && cnpjGrupo !== cnpjFilter) {
-                    tableGroup.style.display = 'none';
-                    return;
-                } else {
-                    tableGroup.style.display = '';
-                }
-
-                // 2. Aplica o filtro de Mod
-                const aplicaFiltroMod = filtroMod === 'ALL' || modGrupo === filtroMod;
-                
-                if (!aplicaFiltroMod) {
-                    tableGroup.style.display = 'none';
-                    return;
-                } else {
-                    // O grupo já está visível pelo filtro de CNPJ, se for o caso
-                    tableGroup.style.display = ''; 
-                }
-
                 let grupoVisivel = false;
                 
-                Array.from(tbody.rows).forEach(row => {
-                    const rowStatusData = row.dataset.status;
-                    const notaChave = row.dataset.chave;
-                    const nota = notasFiscais.find(n => n.chave === notaChave);
-                    
+                // NOVO: Aplica o filtro de CNPJ no nível do grupo (já feito em gerarRelatorioHTML, mas para contingência)
+                if (cnpjFilter !== 'ALL' && cnpjGrupo !== cnpjFilter) {
+                     if (tableGroup) tableGroup.style.display = 'none';
+                     return;
+                } else if (tableGroup) {
+                    tableGroup.style.display = ''; // Garante que o grupo seja visível se o CNPJ for ALL
+                }
+
+                Array.from(tbody.querySelectorAll('tr')).forEach(row => {
+                    const statusRow = row.dataset.status;
+                    const chaveRow = row.dataset.chave;
+                    const nota = notasFiscais.find(n => n.chave === chaveRow);
+
                     let showRow = true;
+
+                    // 1. Filtro de Tipo de Nota (Mod)
+                    if (filtroMod !== 'ALL' && modGrupo !== filtroMod) {
+                        showRow = false;
+                    }
                     
-                    // Filtro de Status
-                    const statusRow = rowStatusData;
+                    // 2. Filtro de Status SEFAZ
                     if (filtroStatus === 'AUTORIZADA' && statusRow !== 'AUTORIZADA') {
                         showRow = false;
                     } else if (filtroStatus === 'AUTORIZADA_FORA_PRAZO' && statusRow !== 'AUTORIZADA_FORA_PRAZO') {
@@ -1073,7 +1146,7 @@
                     } else if (filtroStatus === 'NAO_AUTORIZADA' && (statusRow === 'AUTORIZADA' || statusRow === 'AUTORIZADA_FORA_PRAZO')) {
                         showRow = false;
                     }
-                    
+
                     // 3. Aplica o filtro de busca textual/CNPJ
                     if (filtroBusca !== '') {
                         let matchesSearch = false;
@@ -1100,7 +1173,7 @@
                     }
 
                     row.style.display = showRow ? "" : "none";
-                    
+
                     if (showRow) {
                         grupoVisivel = true;
                         if (nota && nota.statusAutorizacao.isAutorizada) {
@@ -1108,10 +1181,10 @@
                         }
                     }
                 });
-                
+
                 // Se o grupo não tem nenhuma linha visível, ele deve ser ocultado
                 if (tableGroup && !grupoVisivel) {
-                     tableGroup.style.display = 'none';
+                    tableGroup.style.display = 'none';
                 }
             });
 
@@ -1122,33 +1195,275 @@
             }
 
             // Exibe mensagem se não houver notas após todos os filtros
-            if (totalGeralFiltrado === 0 && (filtroMod !== 'ALL' || filtroStatus !== 'ALL' || cnpjFilter !== 'ALL' || filtroBusca !== '')) {
-                const gruposVisiveis = relatorioContainer.querySelectorAll('div[id^="table-group-"]:not([style*="display: none"])');
-                if (gruposVisiveis.length === 0) {
-                     relatorioContainer.innerHTML = `<p>Nenhuma nota fiscal encontrada para a combinação de filtros e busca selecionada.</p>`;
-                }
-            } else if (document.querySelector('.total-geral') === null) {
-                // Se o total sumiu (porque gerou a mensagem acima), restaura a mensagem inicial
-                if (notasFiscais.length > 0) {
-                    gerarRelatorioHTML(gruposGlobais);
-                    // E aplica o filtro novamente
-                    filtrarTabela(filtroBusca);
-                }
+            if (totalGeralFiltrado === 0 && filtroBusca !== '') {
+                 relatorioContainer.innerHTML = `<p>Nenhuma nota fiscal encontrada para a busca: "${searchInput.value}" após aplicar os filtros de grupo.</p>`;
+            } else if (totalGeralFiltrado === 0 && totalGeralFiltrado === 0 && filtroBusca === '') {
+                 // Caso todos os filtros restrinjam o resultado a zero
             }
         }
         
-        function limparBusca() {
-            searchInput.value = '';
-            filtrarTabela('');
+        // --- Geração de PDF ---
+
+        function gerarRelatorioPDF() {
+            const cnpjFiltro = filterCNPJ.value;
+            const filtroMod = filterMod.value;
+            const filtroStatus = filterStatus.value;
+            
+            // 1. Filtrar as notas que devem ir para o PDF (Notas que estão VISÍVEIS na tabela)
+            const notasParaPDF = notasFiscais.filter(nota => {
+                
+                // Filtro CNPJ (obrigatório)
+                if (cnpjFiltro !== 'ALL' && nota.cnpj !== cnpjFiltro) return false;
+                
+                // Filtro Mod
+                if (filtroMod !== 'ALL' && nota.mod !== filtroMod) return false;
+                
+                // Filtro Status
+                const statusUpperCase = nota.statusAutorizacao.text.replace(/ /g, '_').toUpperCase();
+                if (filtroStatus === 'AUTORIZADA' && statusUpperCase !== 'AUTORIZADA') return false;
+                if (filtroStatus === 'AUTORIZADA_FORA_PRAZO' && statusUpperCase !== 'AUTORIZADA_FORA_PRAZO') return false;
+                if (filtroStatus === 'NAO_AUTORIZADA' && (statusUpperCase === 'AUTORIZADA' || statusUpperCase === 'AUTORIZADA_FORA_PRAZO')) return false;
+
+                // Não aplica filtro de busca textual, pois o PDF deve ser um relatório estruturado
+                return true;
+            });
+            
+            if (notasParaPDF.length === 0) {
+                 const cnpjText = cnpjFiltro !== 'ALL' ? ` para o CNPJ ${cnpjFiltro}` : '';
+                 alert(`Nenhuma nota fiscal encontrada para gerar o relatório PDF com os filtros atuais${cnpjText}.`);
+                 return;
+            }
+
+            // 2. Reagrupar apenas as notas que serão incluídas
+            const grupos = notasParaPDF.reduce((acc, nota) => {
+                const chaveGrupo = `${nota.cnpj}-${nota.mod}-${nota.serie}`;
+                if (!acc[chaveGrupo]) {
+                    acc[chaveGrupo] = {
+                        info: {
+                            cnpj: nota.cnpj,
+                            mod: nota.mod,
+                            serie: nota.serie,
+                            emitente: nota.nomeFantasia
+                        },
+                        notas: []
+                    };
+                }
+                acc[chaveGrupo].notas.push(nota);
+                return acc;
+            }, {});
+            
+            if (Object.keys(grupos).length === 0) {
+                alert(`Nenhuma nota fiscal encontrada para o CNPJ ${cnpjFiltro}.`);
+                return;
+            }
+
+            const nomeFantasiaPrincipal = obterNomeFantasiaPrincipal(); // Já considera o filtro CNPJ
+            const dataAtual = new Date();
+            const dataFormatada = formatarDataParaTitulo(dataAtual);
+            
+            // ATUALIZAÇÃO: Lógica para o título do relatório
+            let tituloEmpresa;
+            if (cnpjFiltro === 'ALL') {
+                tituloEmpresa = 'Todas as Empresas';
+            } else {
+                tituloEmpresa = nomeFantasiaPrincipal.replace(/_/g, ' ') + ` (CNPJ: ${cnpjFiltro})`;
+            }
+            const tituloRelatorio = `Relatório Fiscal da Empresa ${tituloEmpresa}, gerado em ${dataFormatada}.`;
+            
+            let htmlPDF = '<div id="relatorio-export">';
+            
+            // Título no PDF
+            htmlPDF += `<h1 class="pdf-report-title">${tituloRelatorio}</h1>`;
+            
+            // Incluir os resumos no PDF (Recriando a estrutura para PDF)
+            const resumoCFOP = {};
+            const resumoPagamento = {};
+
+            // Baseia os resumos nas notas filtradas para o PDF
+            notasParaPDF.forEach(nota => {
+                if (nota.statusAutorizacao.isAutorizada) {
+                    
+                    // CFOP
+                    const cfopKey = nota.cfop;
+                    resumoCFOP[cfopKey] = resumoCFOP[cfopKey] || { count: 0, total: 0 };
+                    resumoCFOP[cfopKey].count++;
+                    resumoCFOP[cfopKey].total += Math.round(nota.valorNumerico * 100);
+
+                    // Pagamento
+                    const pagKey = nota.tPag;
+                    resumoPagamento[pagKey] = resumoPagamento[pagKey] || { count: 0, total: 0 };
+                    resumoPagamento[pagKey].count++;
+                    resumoPagamento[pagKey].total += Math.round(nota.valorNumerico * 100);
+                }
+            });
+
+            const resumoCFOPArray = Object.entries(resumoCFOP)
+                .map(([cfop, data]) => ({ cfop, count: data.count, total: data.total / 100 }))
+                .sort((a, b) => b.total - a.total);
+
+            const resumoPagamentoArray = Object.entries(resumoPagamento)
+                .map(([pag, data]) => ({ pag, count: data.count, total: data.total / 100 }))
+                .sort((a, b) => b.total - a.total);
+            
+            // HTML para os Resumos no PDF
+             if (resumoCFOPArray.length > 0 || resumoPagamentoArray.length > 0) {
+                htmlPDF += `
+                <div style="display: flex; justify-content: space-between; gap: 10px; margin-bottom: 20px;">
+                `;
+
+                // Resumo CFOP
+                if (resumoCFOPArray.length > 0) {
+                    const totalCFOP = resumoCFOPArray.reduce((acc, item) => acc + item.total, 0);
+                    htmlPDF += `
+                        <div style="flex: 1; min-width: 48%;">
+                            <div class="pdf-header" style="border-bottom: 1px solid #ccc;">Resumo por CFOP (Notas Autorizadas)</div>
+                            <table style="font-size: 8pt; margin-top: 0;">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 25%;">CFOP</th>
+                                        <th style="text-align: right; width: 35%;">Qtd.</th>
+                                        <th style="text-align: right; width: 40%;">Valor Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${resumoCFOPArray.map(item => `
+                                        <tr>
+                                            <td>${item.cfop}</td>
+                                            <td style="text-align: right;">${item.count}</td>
+                                            <td style="text-align: right;">${formatarValor(item.total)}</td>
+                                        </tr>
+                                    `).join('')}
+                                     <tr>
+                                        <th colspan="2" style="background-color: #555; color: white;">Total Geral</th>
+                                        <th style="text-align: right; background-color: #555; color: white;">${formatarValor(totalCFOP)}</th>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                }
+
+                // Resumo Pagamento
+                if (resumoPagamentoArray.length > 0) {
+                    const totalPagamento = resumoPagamentoArray.reduce((acc, item) => acc + item.total, 0);
+                    htmlPDF += `
+                        <div style="flex: 1; min-width: 48%;">
+                            <div class="pdf-header" style="border-bottom: 1px solid #ccc;">Resumo por Forma de Pagamento (Notas Autorizadas)</div>
+                            <table style="font-size: 8pt; margin-top: 0;">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 40%;">Forma Pag.</th>
+                                        <th style="text-align: right; width: 30%;">Qtd.</th>
+                                        <th style="text-align: right; width: 30%;">Valor Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${resumoPagamentoArray.map(item => `
+                                        <tr>
+                                            <td>${item.pag}</td>
+                                            <td style="text-align: right;">${item.count}</td>
+                                            <td style="text-align: right;">${formatarValor(item.total)}</td>
+                                        </tr>
+                                    `).join('')}
+                                    <tr>
+                                        <th colspan="2" style="background-color: #555; color: white;">Total Geral</th>
+                                        <th style="text-align: right; background-color: #555; color: white;">${formatarValor(totalPagamento)}</th>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                }
+
+                htmlPDF += `</div>`;
+            }
+
+
+            // Tabela principal por grupo
+            let totalGeral = 0;
+            Object.keys(grupos).forEach(chaveGrupo => {
+                const grupo = grupos[chaveGrupo];
+                const info = grupo.info;
+                const notas = grupo.notas.sort((a, b) => a.nNF - b.nNF); // Reordena para o PDF
+                const tipoNota = info.mod === '55' ? 'NF-e' : (info.mod === '65' ? 'NFC-e' : `Mod. ${info.mod}`);
+
+                // Cabeçalho do Grupo
+                if (cnpjFiltro === 'ALL') {
+                    htmlPDF += `<h3 class="pdf-header">${info.emitente} | CNPJ: ${info.cnpj} | ${tipoNota} | Série: ${info.serie}</h3>`;
+                } else {
+                    htmlPDF += `<div class="pdf-header">${info.emitente} | CNPJ: ${info.cnpj} | ${tipoNota} | Série: ${info.serie}</div>`;
+                }
+
+                // Tabela com colunas otimizadas para o PDF:
+                // Larguras ajustadas para evitar corte de Status Sequência e Status SEFAZ
+                htmlPDF += `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 5%;">Série</th>
+                                <th style="width: 7%;">Número</th>
+                                <th style="width: 12%;">Emissão</th> <th style="width: 10%;">CFOP</th>
+                                <th style="width: 13%;">Valor Total</th> <th style="width: 18%;">Status SEFAZ</th> <th style="width: 35%;">Status Sequência</th> </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                notas.forEach(nota => {
+                    const statusFinal = nota.statusAutorizacao.text;
+                    const quebraText = nota.quebra;
+                    const quebraStyle = nota.quebra.includes('QUEBRA') || nota.quebra.includes('DUPLICIDADE') ? 'background-color: #fcf4f2;' : '';
+                    
+                    if (nota.statusAutorizacao.isAutorizada) {
+                         totalGeral += nota.valorNumerico;
+                    }
+                    
+                    // Style para notas canceladas/rejeitadas no PDF
+                    const rowStyle = nota.statusAutorizacao.class === 'status-cancelada' || nota.statusAutorizacao.class === 'status-sem-autorizacao'
+                        ? 'background-color: #fcf4f2;' 
+                        : (nota.statusAutorizacao.class === 'status-autorizada' ? 'background-color: #effceb;' : '');
+
+                    htmlPDF += `
+                        <tr style="${rowStyle}">
+                            <td>${nota.serie}</td>
+                            <td>${nota.nNF}</td>
+                            <td>${formatarData(nota.dhEmi)}</td>
+                            <td>${nota.cfop}</td>
+                            <td style="text-align: right;">${formatarValor(nota.valorNumerico)}</td>
+                            <td>${statusFinal}</td>
+                            <td style="${quebraStyle}">${quebraText}</td>
+                        </tr>
+                    `;
+                });
+
+                htmlPDF += '</tbody></table>';
+            });
+            
+            // Total Geral no PDF
+             htmlPDF += `
+                <div class="total-geral" style="font-size: 14pt; margin-top: 20px;">
+                    Total Geral (Notas Autorizadas no Relatório): <span>${formatarValor(totalGeral)}</span>
+                </div>
+            `;
+            
+            htmlPDF += '</div>'; // Fecha #relatorio-export
+
+            // 3. Exportar para PDF
+            const opt = {
+                margin: 0.5,
+                filename: `Relatorio_Sequencia_${tituloEmpresa}_${dataFormatada}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' } // Orientação paisagem é mais segura para tabelas largas
+            };
+
+            const element = document.createElement('div');
+            element.innerHTML = htmlPDF;
+            
+            html2pdf().from(element).set(opt).save();
         }
+        
+        // --- Download de XMLs ---
 
-
-        // --- Exportação de XMLs (Compactação ZIP) ---
-
-        /**
-         * Compacta e baixa os arquivos XML filtrados por tipo (NFE/NFCE) e pelo CNPJ atual.
-         * @param {string} tipo - 'NFE' ou 'NFCE'.
-         */
         function compactarEBaixarXML(tipo) {
             const modFilter = tipo === 'NFE' ? '55' : '65';
             const cnpjFilter = filterCNPJ.value;
@@ -1163,7 +1478,7 @@
                 if (cnpjFilter !== 'ALL' && nota && nota.cnpj !== cnpjFilter) {
                     matchesCNPJ = false;
                 }
-
+                
                 // Se não encontrou a nota correspondente mas o CNPJ está filtrado, deve ser ignorado.
                 if (cnpjFilter !== 'ALL' && !nota) {
                     // Tenta extrair o CNPJ do XML bruto, se não encontrou no cache de notasFiscais
@@ -1172,7 +1487,7 @@
                         matchesCNPJ = false;
                     }
                 }
-                
+
                 return arq.mod === modFilter && matchesCNPJ;
             });
 
@@ -1190,7 +1505,7 @@
             // ATUALIZAÇÃO: Condicional para o nome do arquivo
             let nomeArquivoZip;
             if (cnpjFilter === 'ALL') {
-                const periodoEmissao = obterPeriodoEmissaoPrincipal(); 
+                const periodoEmissao = obterPeriodoEmissaoPrincipal();
                 nomeArquivoZip = `xml-${tipo}-Todos-CNPJs-${periodoEmissao}.zip`;
             } else {
                 const nomeFantasiaPrincipal = obterNomeFantasiaPrincipal(); // Já considera o CNPJ filtrado
@@ -1209,220 +1524,12 @@
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
-            }).catch(error => {
-                alert('Erro ao gerar o arquivo ZIP: ' + error.message);
             });
         }
-
-        // --- Geração do Relatório PDF ---
         
-        function gerarRelatorioPDF() {
-            // Filtra as notas pelo CNPJ selecionado (se não for 'ALL')
-            const cnpjFiltro = filterCNPJ.value;
-            const notasParaPDF = notasFiscais.filter(n => cnpjFiltro === 'ALL' || n.cnpj === cnpjFiltro);
-            
-            if (notasParaPDF.length === 0) {
-                alert(`Nenhuma nota fiscal encontrada para o CNPJ ${cnpjFiltro} para gerar o PDF.`);
-                return;
-            }
-            
-            // Re-agrupa as notas que serão incluídas no PDF (apenas as filtradas)
-            const grupos = notasParaPDF.reduce((acc, nota) => {
-                const chaveGrupo = `${nota.cnpj}-${nota.mod}-${nota.serie}`;
-                if (!acc[chaveGrupo]) {
-                    acc[chaveGrupo] = {
-                        info: {
-                            cnpj: nota.cnpj,
-                            mod: nota.mod,
-                            serie: nota.serie,
-                            emitente: nota.nomeFantasia
-                        },
-                        notas: []
-                    };
-                }
-                acc[chaveGrupo].notas.push(nota);
-                return acc;
-            }, {});
-
-            if (Object.keys(grupos).length === 0) {
-                alert(`Nenhuma nota fiscal encontrada para o CNPJ ${cnpjFiltro}.`);
-                return;
-            }
-
-            const nomeFantasiaPrincipal = obterNomeFantasiaPrincipal(); // Já considera o filtro CNPJ
-            const dataAtual = new Date();
-            const dataFormatada = formatarDataParaTitulo(dataAtual);
-
-            // ATUALIZAÇÃO: Lógica para o título do relatório
-            let tituloEmpresa;
-            if (cnpjFiltro === 'ALL') {
-                tituloEmpresa = 'Todas as Empresas';
-            } else {
-                tituloEmpresa = nomeFantasiaPrincipal.replace(/_/g, ' ') + ` (CNPJ: ${cnpjFiltro})`;
-            }
-
-            const tituloRelatorio = `Relatório Fiscal da Empresa ${tituloEmpresa}, gerado em ${dataFormatada}.`;
-            let htmlPDF = '<div id="relatorio-export">';
-            
-            // Título no PDF
-            htmlPDF += `<h1 class="pdf-report-title">${tituloRelatorio}</h1>`;
-            
-            // Incluir os resumos no PDF (Recriando a estrutura para PDF)
-            const resumoCFOP = {};
-            const resumoPagamento = {};
-            
-            // Baseia os resumos nas notas filtradas para o PDF
-            notasParaPDF.forEach(nota => {
-                if (nota.statusAutorizacao.isAutorizada) { // Usa a nova flag de autorização
-                    // CFOP
-                    const cfopKey = nota.cfop;
-                    resumoCFOP[cfopKey] = resumoCFOP[cfopKey] || { count: 0, total: 0 };
-                    resumoCFOP[cfopKey].count++;
-                    resumoCFOP[cfopKey].total += Math.round(nota.valorNumerico * 100);
-
-                    // Pagamento
-                    const pagKey = nota.tPag;
-                    resumoPagamento[pagKey] = resumoPagamento[pagKey] || { count: 0, total: 0 };
-                    resumoPagamento[pagKey].count++;
-                    resumoPagamento[pagKey].total += Math.round(nota.valorNumerico * 100);
-                }
-            });
-
-            const resumoCFOPArray = Object.entries(resumoCFOP)
-                .map(([cfop, data]) => ({ cfop, count: data.count, total: data.total / 100 }))
-                .sort((a, b) => b.total - a.total);
-            const resumoPagamentoArray = Object.entries(resumoPagamento)
-                .map(([forma, data]) => ({ forma, count: data.count, total: data.total / 100 }))
-                .sort((a, b) => b.total - a.total);
-
-            let totalGeralPDF = 0;
-            if (resumoCFOPArray.length > 0) {
-                // HTML dos Resumos
-                htmlPDF += `
-                    <div style="display: flex; justify-content: space-between; gap: 10px; margin-bottom: 20px;">
-                        <div style="flex: 1; border: 1px solid #ccc; padding: 5px; border-radius: 4px;">
-                            <h4 style="font-size: 10pt; margin: 0 0 5px 0; border-bottom: 1px solid #ccc; padding-bottom: 3px;">Resumo por CFOP</h4>
-                            <table style="font-size: 8pt; margin-top: 0;">
-                                <thead><tr><th>CFOP</th><th>Qtd</th><th>Valor Total</th></tr></thead>
-                                <tbody>
-                                    ${resumoCFOPArray.map(item => {
-                                        totalGeralPDF += item.total;
-                                        return `<tr><td>${item.cfop}</td><td style="text-align: right;">${item.count}</td><td style="text-align: right;">${formatarValor(item.total)}</td></tr>`;
-                                    }).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                        <div style="flex: 1; border: 1px solid #ccc; padding: 5px; border-radius: 4px;">
-                            <h4 style="font-size: 10pt; margin: 0 0 5px 0; border-bottom: 1px solid #ccc; padding-bottom: 3px;">Resumo por Pagamento</h4>
-                            <table style="font-size: 8pt; margin-top: 0;">
-                                <thead><tr><th>Forma Pagamento</th><th>Qtd</th><th>Valor Total</th></tr></thead>
-                                <tbody>
-                                    ${resumoPagamentoArray.map(item => 
-                                        `<tr><td>${item.forma}</td><td style="text-align: right;">${item.count}</td><td style="text-align: right;">${formatarValor(item.total)}</td></tr>`
-                                    ).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Tabela principal por grupo
-            Object.keys(grupos).forEach(chaveGrupo => {
-                const grupo = grupos[chaveGrupo];
-                const info = grupo.info;
-                const notas = grupo.notas.sort((a, b) => a.nNF - b.nNF); // Reordena para o PDF
-                const tipoNota = info.mod === '55' ? 'NF-e' : (info.mod === '65' ? 'NFC-e' : `Mod. ${info.mod}`);
-
-                // Cabeçalho do Grupo
-                if (cnpjFiltro === 'ALL') {
-                    htmlPDF += `<h3 class="pdf-header">${info.emitente} | CNPJ: ${info.cnpj} | ${tipoNota} | Série: ${info.serie}</h3>`;
-                } else {
-                    htmlPDF += `<div class="pdf-header">${info.emitente} | CNPJ: ${info.cnpj} | ${tipoNota} | Série: ${info.serie}</div>`;
-                }
-
-
-                // Tabela com colunas otimizadas para o PDF:
-                // Remoção de Chave de Acesso, Forma Pag. e Status Sequência
-                htmlPDF += `
-                    <table>
-                        <thead>
-                            <tr>
-                                <th style="width: 5%;">Série</th>
-                                <th style="width: 7%;">Número</th>
-                                <th style="width: 15%;">Emissão</th>
-                                <th style="width: 10%;">CFOP</th>
-                                <th style="width: 15%;">Valor Total</th>
-                                <th style="width: 15%;">Status SEFAZ</th>
-                                <th style="width: 33%;">Status Sequência</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                `;
-
-                notas.forEach(nota => {
-                    const statusFinal = nota.statusAutorizacao.text;
-                    const quebraText = nota.quebra;
-                    const quebraStyle = nota.quebra.includes('QUEBRA') || nota.quebra.includes('DUPLICIDADE') ? 'background-color: #fcf4f2;' : '';
-                    
-                    htmlPDF += `
-                        <tr style="${nota.statusAutorizacao.class === 'status-cancelada' ? 'background-color: #fcf4f2;' : ''}">
-                            <td>${nota.serie}</td>
-                            <td>${nota.nNF}</td>
-                            <td>${formatarData(nota.dhEmi)}</td>
-                            <td>${nota.cfop}</td>
-                            <td style="text-align: right;">${formatarValor(nota.valorNumerico)}</td>
-                            <td>${statusFinal}</td>
-                            <td style="${quebraStyle}">${quebraText}</td>
-                        </tr>
-                    `;
-                });
-                
-                htmlPDF += '</tbody></table>';
-            });
-            
-            // Total Geral ao final
-            htmlPDF += `
-                <div class="total-geral" style="font-size: 14pt; margin-top: 20px;">
-                    Total Geral (Notas Autorizadas): <span>${formatarValor(totalGeralPDF)}</span>
-                </div>
-            `;
-            htmlPDF += '</div>';
-
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = htmlPDF;
-            document.body.appendChild(tempDiv);
-            
-            // --- NOVO FORMATO DO NOME DO ARQUIVO ---
-            let nomeArquivo;
-            if (cnpjFiltro === 'ALL') {
-                const periodoEmissao = obterPeriodoEmissaoPrincipal(); 
-                nomeArquivo = `Relatorio_Fiscal_Todos_CNPJs_${periodoEmissao}.pdf`;
-            } else {
-                const periodoEmissao = obterPeriodoEmissaoPrincipal(); // Já considera o filtro CNPJ
-                // NOVO: Adicionado CNPJ no nome do arquivo se o filtro for aplicado
-                nomeArquivo = `Relatorio_Fiscal_${nomeFantasiaPrincipal}_${periodoEmissao}_${cnpjFiltro}.pdf`;
-            }
-            
-            // Configurações do PDF para garantir que o conteúdo caiba
-            const opt = {
-                margin: 10,
-                filename: nomeArquivo,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2 },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } // Mantido A4 Portrait, mas otimizado com CSS
-            };
-
-            html2pdf().set(opt).from(tempDiv).save().then(() => {
-                 // Remove a div temporária após a geração
-                document.body.removeChild(tempDiv);
-            });
-        }
-
-        // --- Limpeza ---
+        // --- Limpar Dados ---
 
         function limparArquivos() {
-            // Reinicia o estado da aplicação
             notasFiscais = [];
             gruposGlobais = {};
             arquivosXML = []; // NOVO: Limpa o array de arquivos XML
@@ -1445,143 +1552,47 @@
         /**
          * Retorna o texto de uma tag, ou 'N/A' se não encontrada.
          * @param {XMLDocument} xmlDoc - O documento XML.
-         * @param {string} tagName - O nome da tag (ex: 'CNPJ').
-         * @param {string} parentTag - O nome da tag pai (opcional, ex: 'emit').
+         * @param {string} tag - O nome da tag a ser buscada.
+         * @param {string} parent - O nome da tag pai opcional para refinar a busca.
          * @returns {string} O conteúdo da tag ou 'N/A'.
          */
-        function safeText(xmlDoc, tagName, parentTag = 'infNFe,NFe,infCpl,ide,emit,dest,total,ICMSTot,retEvento,retEnviNFe,protNFe') {
-            let element;
-            
-            // Tratamento especial para CFOP (dentro de det/prod)
-            if (tagName === 'CFOP') {
-                // Procura por <det><prod><CFOP> ou <det><CFOP>
-                element = xmlDoc.querySelector('det prod CFOP, det CFOP');
-                if (element) return element.textContent;
-            }
-
-            // Tratamento especial para tPag (dentro de pag) - NFC-e
-            if (tagName === 'tPag') {
-                element = xmlDoc.querySelector('pag detPag tPag');
-                if (element) return element.textContent;
+        function safeText(xmlDoc, tag, parent) {
+            let selector = tag;
+            if (parent) {
+                selector = `${parent} ${tag}`;
+            } else if (tag === 'CNPJ') {
+                 // Prioriza o CNPJ do emitente
+                 selector = 'emit CNPJ';
             }
             
-             // Tratamento especial para vNF (Valor Total da Nota)
-            if (tagName === 'vNF') {
-                element = xmlDoc.querySelector('total ICMSTot vNF');
-                if (element) return element.textContent;
-            }
-            
-            // Tratamento genérico
-            if (parentTag) {
-                // Procura dentro da tag pai especificada
-                const parents = parentTag.split(',');
-                for (let i = 0; i < parents.length; i++) {
-                    const parent = xmlDoc.querySelector(parents[i]);
-                    if (parent) {
-                        element = parent.querySelector(tagName);
-                        if (element) break;
-                    }
-                }
-            } else {
-                element = xmlDoc.querySelector(tagName);
-            }
-
+            const element = xmlDoc.querySelector(selector);
             return element ? element.textContent.trim() : 'N/A';
         }
 
         /**
-         * Retorna o valor de uma tag como inteiro, ou 0 se não encontrada.
-         * @param {XMLDocument} xmlDoc - O documento XML.
-         * @param {string} tagName - O nome da tag (ex: 'nNF').
-         * @param {string} parentTag - O nome da tag pai (opcional).
-         * @returns {number} O conteúdo da tag como inteiro ou 0.
+         * Retorna o valor de uma tag como número inteiro ou 0.
          */
-        function safeInt(xmlDoc, tagName, parentTag) {
-            const text = safeText(xmlDoc, tagName, parentTag);
-            return text !== 'N/A' ? parseInt(text, 10) : 0;
+        function safeInt(xmlDoc, tag) {
+            const text = safeText(xmlDoc, tag);
+            return parseInt(text) || 0;
         }
 
         /**
-         * Formata a string de data/hora (Ex: 2023-10-27T10:30:00-03:00) para DD/MM/AAAA HH:MM.
-         * @param {string} dhEmi - Data/Hora de emissão do XML.
-         * @returns {string} Data/Hora formatada.
-         */
-        function formatarData(dhEmi) {
-            try {
-                // Tenta criar um objeto Date.
-                const data = new Date(dhEmi);
-                
-                // Verifica se a data é válida
-                if (isNaN(data)) {
-                    // Tenta o formato antigo (versão 2.00) se for apenas YYYY-MM-DD
-                    if (dhEmi.length >= 10 && dhEmi.includes('-')) {
-                        const parts = dhEmi.substring(0, 10).split('-');
-                        return `${parts[2]}/${parts[1]}/${parts[0]}`;
-                    }
-                    return dhEmi.substring(0, 10).replace(/(\d{4})(\d{2})(\d{2})/, '$3/$2/$1') || 'Data Inválida';
-                }
-
-                // Formata a data (DD/MM/AAAA)
-                const dataFormatada = data.toLocaleDateString('pt-BR', {
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit'
-                });
-
-                // Formata a hora (HH:MM)
-                const horaFormatada = data.toLocaleTimeString('pt-BR', {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
-
-                return `${dataFormatada} ${horaFormatada}`;
-
-            } catch (e) {
-                // Retorna a parte da data bruta se houver erro
-                return dhEmi ? dhEmi.substring(0, 10) : 'N/A';
-            }
-        }
-
-        /**
-         * Formata a data para o título do arquivo (MM-AAAA).
-         * @param {Date} data - Objeto Date.
-         * @returns {string} Mês-Ano.
-         */
-        function formatarDataParaTitulo(data) {
-             const ano = data.getFullYear();
-             const mes = String(data.getMonth() + 1).padStart(2, '0');
-             return `${mes}-${ano}`;
-        }
-        
-        /**
-         * Converte valor numérico para o padrão de moeda brasileira (R$ X.XXX,XX).
-         * @param {string|number} valor - Valor numérico.
-         * @returns {string} Valor formatado em BRL.
-         */
-        function formatarValor(valor) {
-            if (valor === undefined || valor === null || isNaN(parseFloat(valor))) {
-                return 'R$ 0,00';
-            }
-            const numero = parseFloat(valor);
-            return numero.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-        }
-        
-        /**
-         * Determina o status de autorização e o estilo CSS.
-         * @param {string} cStat - Código de Status da SEFAZ.
-         * @param {string} xMotivo - Motivo do Status.
-         * @param {XMLDocument} xmlDoc - Documento XML para verificar Cancelamento por Evento.
-         * @returns {{text: string, class: string, isAutorizada: boolean, isAutorizadaForaPrazo: boolean}} Objeto com detalhes do status.
+         * Formata o status da nota fiscal (cStat) para exibição.
          */
         function formatarStatus(cStat, xMotivo, xmlDoc) {
-            const eventType = xmlDoc.querySelector('tpEvento');
-            const cStatEvento = xmlDoc.querySelector('retEvento cStat');
-            const xMotivoEvento = xmlDoc.querySelector('retEvento xMotivo');
+             // 1. Prioriza o status de evento de cancelamento (se houver)
+            const cStatEvento = xmlDoc.querySelector('retCanc cStat');
+            const tpEvento = xmlDoc.querySelector('tpEvento');
             
-            // 1. Prioriza Cancelamento (Evento 110111)
-            if (eventType && eventType.textContent === '110111') {
+            if (tpEvento && tpEvento.textContent === '110111') {
                 if (cStatEvento && cStatEvento.textContent === '135') {
-                    return { text: 'CANCELADA (Evento 135)', class: 'status-cancelada', isAutorizada: false, isAutorizadaForaPrazo: false }; // ATUALIZAÇÃO: Adicionado isAutorizadaForaPrazo
+                    return { 
+                        text: 'CANCELADA (Evento 135)', 
+                        class: 'status-cancelada', 
+                        isAutorizada: false,
+                        isAutorizadaForaPrazo: false
+                    }; // ATUALIZAÇÃO: Adicionado isAutorizadaForaPrazo
                 }
             }
             
@@ -1589,21 +1600,51 @@
             if (cStat) {
                 switch(cStat) {
                     case '100':
-                        return { text: 'AUTORIZADA', class: 'status-autorizada', isAutorizada: true, isAutorizadaForaPrazo: false }; // ATUALIZAÇÃO: Adicionado isAutorizadaForaPrazo
+                        return { 
+                            text: 'AUTORIZADA', 
+                            class: 'status-autorizada', 
+                            isAutorizada: true,
+                            isAutorizadaForaPrazo: false
+                        }; // ATUALIZAÇÃO: Adicionado isAutorizadaForaPrazo
                     case '150': // NOVO: Tratamento para Autorizada fora do prazo
-                        return { text: 'AUTORIZADA FORA PRAZO', class: 'status-autorizada', isAutorizada: true, isAutorizadaForaPrazo: true };
+                        return { 
+                            text: 'AUTORIZADA FORA PRAZO', 
+                            class: 'status-autorizada', 
+                            isAutorizada: true,
+                            isAutorizadaForaPrazo: true
+                        };
                     case '101':
-                        return { text: 'CANCELADA (Protocolo 101)', class: 'status-cancelada', isAutorizada: false, isAutorizadaForaPrazo: false };
+                        return { 
+                            text: 'CANCELADA (Protocolo 101)', 
+                            class: 'status-cancelada', 
+                            isAutorizada: false,
+                            isAutorizadaForaPrazo: false
+                        };
                     case '102':
-                        return { text: 'INUTILIZADA (Protocolo 102)', class: 'status-cancelada', isAutorizada: false, isAutorizadaForaPrazo: false };
+                        return { 
+                            text: 'INUTILIZADA (Protocolo 102)', 
+                            class: 'status-cancelada', 
+                            isAutorizada: false,
+                            isAutorizadaForaPrazo: false
+                        };
                     default:
                         // Para qualquer outro código (Rejeição)
-                        return { text: `NÃO AUTORIZADA (${xMotivo})`, class: 'status-sem-autorizacao', isAutorizada: false, isAutorizadaForaPrazo: false };
+                        return { 
+                            text: `NÃO AUTORIZADA (${xMotivo})`, 
+                            class: 'status-sem-autorizacao', 
+                            isAutorizada: false,
+                            isAutorizadaForaPrazo: false
+                        };
                 }
             }
-            
+
             // 3. Caso não tenha cStat (XML mal formado/não processado)
-            return { text: 'XML Inválido/Sem Protocolo', class: 'status-sem-autorizacao', isAutorizada: false, isAutorizadaForaPrazo: false };
+            return { 
+                text: 'XML Inválido/Sem Protocolo', 
+                class: 'status-sem-autorizacao', 
+                isAutorizada: false,
+                isAutorizadaForaPrazo: false
+            };
         }
 
         /**
@@ -1611,52 +1652,46 @@
          * @returns {string} Nome Fantasia ou 'Empresa'
          */
         function obterNomeFantasiaPrincipal() {
-            // ATUALIZAÇÃO: Retorna 'Empresa' se o filtro for ALL
-            if (filterCNPJ.value === 'ALL') {
-                return 'Empresa';
-            }
-            
-            // Considera apenas notas do CNPJ filtrado.
-            const notasFiltradas = notasFiscais.filter(n => n.cnpj === filterCNPJ.value);
+            // ATUALIZAÇÃO: Retorna 'Empresa' se o filtro for ALL e não houver notas
+            const cnpjFiltro = filterCNPJ.value;
+            const notasFiltradas = notasFiscais.filter(n => cnpjFiltro === 'ALL' || n.cnpj === cnpjFiltro);
             
             if (notasFiltradas.length === 0) return 'Empresa';
-
-            const contagem = notasFiltradas.reduce((acc, nota) => {
-                const nome = nota.nomeFantasia;
+            
+            const nomes = notasFiltradas.map(n => n.nomeFantasia).filter(n => n && n !== 'N/A');
+            if (nomes.length === 0) return 'Empresa';
+            
+            // Conta a ocorrência de cada nome
+            const contagem = nomes.reduce((acc, nome) => {
                 acc[nome] = (acc[nome] || 0) + 1;
                 return acc;
             }, {});
-
+            
+            // Encontra o nome mais frequente
             let nomePrincipal = 'Empresa';
             let maxCount = 0;
-
             for (const nome in contagem) {
                 if (contagem[nome] > maxCount) {
                     maxCount = contagem[nome];
-                    nomePrincipal = nome;
+                    // Normaliza o nome para o arquivo (remove espaços e caracteres especiais)
+                    nomePrincipal = nome.replace(/[^a-zA-Z0-9]/g, '_'); 
                 }
             }
-            // Remove espaços e substitui por underscore para o nome do arquivo
-            return nomePrincipal.replace(/\s/g, '_');
+            return nomePrincipal;
         }
-
+        
         /**
-         * Encontra o período de emissão (mês/ano) das notas carregadas.
-         * AGORA: Considera apenas o CNPJ filtrado.
-         * @returns {string} O período de emissão em MM-AAAA.
+         * Retorna o período de emissão (MM-AAAA) para o nome do arquivo ZIP/PDF.
          */
         function obterPeriodoEmissaoPrincipal() {
-            // NOVO: Considera apenas notas do CNPJ filtrado, se houver filtro.
-            const notasFiltradas = notasFiscais.filter(n => filterCNPJ.value === 'ALL' || n.cnpj === filterCNPJ.value);
-
-            if (notasFiltradas.length === 0) return formatarDataParaTitulo(new Date());
-
-            // Ordena pela data de emissão para pegar o intervalo (mais antiga - mais recente)
+            const cnpjFiltro = filterCNPJ.value;
+            const notasFiltradas = notasFiscais.filter(n => cnpjFiltro === 'ALL' || n.cnpj === cnpjFiltro);
+            
             const datas = notasFiltradas
                 .map(n => new Date(n.dhEmi))
                 .filter(d => !isNaN(d.getTime())) // Filtra datas inválidas
                 .sort((a, b) => a - b);
-            
+
             if (datas.length === 0) return formatarDataParaTitulo(new Date());
 
             const primeiraData = datas[0];
@@ -1672,6 +1707,51 @@
             }
         }
 
+
+        /**
+         * Formata a data e hora do XML (AAAA-MM-DDThh:mm:ss-TZ) para (DD/MM/AAAA hh:mm).
+         */
+        function formatarData(dhEmi) {
+            if (!dhEmi || dhEmi === 'N/A') return 'N/A';
+            try {
+                // A data pode vir no formato "AAAA-MM-DDThh:mm:ss-TZ" ou "AAAA-MM-DDThh:mm:ss"
+                const data = new Date(dhEmi.substring(0, 19)); // Pega até os segundos
+                if (isNaN(data.getTime())) return 'Data Inválida';
+                
+                const dia = String(data.getDate()).padStart(2, '0');
+                const mes = String(data.getMonth() + 1).padStart(2, '0');
+                const ano = data.getFullYear();
+                const hora = String(data.getHours()).padStart(2, '0');
+                const minuto = String(data.getMinutes()).padStart(2, '0');
+                
+                return `${dia}/${mes}/${ano} ${hora}:${minuto}`;
+
+            } catch (e) {
+                return 'Erro na Data';
+            }
+        }
+        
+        /**
+         * Formata a data para ser usada em títulos de arquivo/PDF.
+         */
+        function formatarDataParaTitulo(data) {
+             const dia = String(data.getDate()).padStart(2, '0');
+             const mes = String(data.getMonth() + 1).padStart(2, '0');
+             const ano = data.getFullYear();
+             return `${dia}-${mes}-${ano}`;
+        }
+
+
+        /**
+         * Formata valor numérico para o padrão monetário BRL.
+         */
+        function formatarValor(valor) {
+            return new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+            }).format(valor);
+        }
+        
         // --- NOVO: Funções Auxiliares para Detalhes do XML ---
 
         /**
@@ -1707,40 +1787,24 @@
 
             const danfeHTML = generateSimplifiedDANFE(nota, xmlDoc);
 
-            document.getElementById('modal-nf-number').textContent = `${nota.nNF} (Chave: ${chaveAcesso})`;
+            document.getElementById('modal-nf-number').textContent = `${nota.nNF} (Série ${nota.serie} | Mod. ${nota.mod})`;
             document.getElementById('danfe-simplified-container').innerHTML = danfeHTML;
             document.getElementById('xmlDetailsModal').style.display = 'block';
         }
 
-        /**
-         * Fecha o modal de visualização.
-         */
         function closeModal() {
             document.getElementById('xmlDetailsModal').style.display = 'none';
         }
-
-        // Fecha o modal ao clicar fora ou na tecla ESC
-        window.onclick = function(event) {
-            const modal = document.getElementById('xmlDetailsModal');
-            if (event.target == modal) {
-                closeModal();
-            }
-        }
-        document.addEventListener('keydown', function(event) {
-            if (event.key === 'Escape' && document.getElementById('xmlDetailsModal').style.display === 'block') {
-                closeModal();
-            }
-        });
-
+        
         /**
-         * Gera o HTML simplificado do DANFE/DANFCE a partir do XML.
-         * @param {Object} nota - Objeto da nota fiscal (do array notasFiscais).
+         * Gera o HTML para a visualização simplificada do DANFE/DANFCE.
+         * @param {Object} nota - O objeto nota fiscal do array de notas.
          * @param {XMLDocument} xmlDoc - O documento XML completo.
-         * @returns {string} O HTML do DANFE Simplificado.
+         * @returns {string} HTML do DANFE Simplificado.
          */
         function generateSimplifiedDANFE(nota, xmlDoc) {
             const isNFe = nota.mod === '55';
-            
+
             // --- Funções de Extração de Campos no XML ---
             // Reutiliza safeText, mas passando o parent específico para garantir o nó correto
             const getSafeText = (tag, parent) => safeText(xmlDoc, tag, parent);
@@ -1749,7 +1813,7 @@
             const natOp = getSafeText('natOp'); // Natureza da Operação
             const dhEmi = getSafeText('dhEmi'); // Data/Hora Emissão
             const nProt = getSafeText('nProt', 'protNFe'); // Número do Protocolo (dentro de protNFe)
-            
+
             // EMITENTE (Emit)
             const xNomeEmit = getSafeText('xNome', 'emit');
             const CNPJEmit = getSafeText('CNPJ', 'emit');
@@ -1769,51 +1833,48 @@
             
             const destNode = xmlDoc.querySelector('dest');
             if (destNode) {
-                xNomeDest = getSafeText('xNome', 'dest') || xNomeDest; 
+                xNomeDest = getSafeText('xNome', 'dest') || xNomeDest;
                 CNPJDest = getSafeText('CNPJ', 'dest') || getSafeText('CPF', 'dest') || CNPJDest;
                 IEDest = getSafeText('IE', 'dest') || IEDest;
                 xLgrDest = getSafeText('xLgr', 'enderDest') || '';
                 xMunDest = getSafeText('xMun', 'enderDest') || '';
                 UFDest = getSafeText('UF', 'enderDest') || '';
             }
-            
+
             // TOTAIS (ICMSTot)
             const vProd = getSafeText('vProd'); // Valor Total dos Produtos
             const vDesc = getSafeText('vDesc'); // Valor Total do Desconto
             const vTotTrib = getSafeText('vTotTrib'); // Valor Total Aproximado dos Tributos (Lei 12.741/12)
             const vICMS = getSafeText('vICMS');
             const vIPI = getSafeText('vIPI');
-            
+
             // INFORMAÇÕES ADICIONAIS
             const infCpl = getSafeText('infCpl', 'infAdic'); // Informações Complementares
 
             // ITENS (det)
             const itens = safeQuerySelectorAll(xmlDoc, 'det');
             let itensHTML = `
+            <div class="danfe-section">
+                <h4>Itens da Nota Fiscal</h4>
                 <table class="danfe-items-table">
                     <thead>
                         <tr>
-                            <th style="width: 5%;">Cód.</th>
-                            <th style="width: 35%;">Descrição do Produto</th>
-                            <th style="width: 10%;">Qtd</th>
-                            <th style="width: 8%;">Unid</th>
-                            <th style="width: 12%;">Vl. Unit.</th>
-                            <th style="width: 12%;">Vl. Total</th>
-                            <th style="width: 8%;">CFOP</th>
-                        </tr>
+                            <th style="width: 10%;">Cód. Prod.</th>
+                            <th style="width: auto;">Descrição do Produto</th> <th style="width: 8%;">Qtd.</th> <th style="width: 7%;">Un.</th> <th style="width: 15%;">Vl. Unit.</th>
+                            <th style="width: 15%;">Vl. Total</th>
+                            <th style="width: 10%;">CFOP</th> </tr>
                     </thead>
-                    <tbody>
+                <tbody>
             `;
 
             itens.forEach(item => {
                 const prod = item.querySelector('prod');
-                if (!prod) return; // Ignora se não houver tag 'prod'
-                
-                // Os valores precisam ser obtidos com segurança, pois nem todos os campos são obrigatórios
+                if (!prod) return;
+
                 const cProd = prod.querySelector('cProd') ? prod.querySelector('cProd').textContent : 'N/A';
                 const xProd = prod.querySelector('xProd') ? prod.querySelector('xProd').textContent : 'N/A';
                 const qComElement = prod.querySelector('qCom');
-                const qCom = qComElement ? parseFloat(qComElement.textContent).toFixed(3) : '0.000';
+                const qCom = qComElement ? parseFloat(qComElement.textContent).toFixed(4) : '0.0000'; // Qtd. comercial (4 casas decimais)
                 const uCom = prod.querySelector('uCom') ? prod.querySelector('uCom').textContent : 'N/A';
                 const vUnComElement = prod.querySelector('vUnCom');
                 const vUnCom = vUnComElement ? parseFloat(vUnComElement.textContent).toFixed(2) : '0.00';
@@ -1833,8 +1894,8 @@
                     </tr>
                 `;
             });
-            
-            itensHTML += `</tbody></table>`;
+
+            itensHTML += `</tbody></table></div>`;
 
             // PAGAMENTO (pag) - Para NFC-e e NF-e
             let pagamentoHTML = '';
@@ -1842,117 +1903,104 @@
             if (pag) {
                 pagamentoHTML += '<h4>Dados de Pagamento</h4>';
                 pagamentoHTML += '<div class="danfe-detail-line">';
-                
+
                 // Usa safeQuerySelectorAll (no contexto da tag 'pag' para ser mais específico)
-                const detPagamentos = xmlDoc.querySelectorAll('pag detPag');
+                let detPagamentos = xmlDoc.querySelectorAll('pag detPag');
+                
+                // Tenta se o detPag estiver direto no NFe/infNFe (versões antigas)
                 if(detPagamentos.length === 0 && pag.parentNode && pag.parentNode.querySelector('detPag')) {
-                    // Tenta se o detPag estiver direto no NFe/infNFe (versões antigas)
                     detPagamentos = xmlDoc.querySelectorAll('detPag');
                 }
 
                 Array.from(detPagamentos).forEach((detPag, index) => {
-                     const tPag = detPag.querySelector('tPag') ? detPag.querySelector('tPag').textContent : '99';
-                     const vPag = detPag.querySelector('vPag') ? detPag.querySelector('vPag').textContent : '0.00';
-                     
-                     pagamentoHTML += `
-                         <div class="danfe-detail-item">
-                             <strong>Pagamento ${index + 1}</strong>
-                             ${formasPagamento[tPag] || 'Outros'} - ${formatarValor(vPag)}
-                         </div>
-                     `;
+                    const tPag = detPag.querySelector('tPag') ? detPag.querySelector('tPag').textContent : '99';
+                    const vPag = detPag.querySelector('vPag') ? detPag.querySelector('vPag').textContent : '0.00';
+                    const nomePag = formasPagamento[tPag] || 'Outros';
+
+                    pagamentoHTML += `
+                        <div class="danfe-detail-item">
+                            <strong>${nomePag}</strong>
+                            ${formatarValor(vPag)}
+                        </div>
+                    `;
                 });
                 
                 pagamentoHTML += '</div>';
             }
 
-            // MONTAGEM DO HTML FINAL
-            let html = `
+
+            // MONTAGEM FINAL
+            const html = `
                 <div class="danfe-simplificado">
                     <div class="danfe-header">
-                        <strong>${isNFe ? 'NOTA FISCAL ELETRÔNICA (NF-e)' : 'NOTA FISCAL DE CONSUMIDOR ELETRÔNICA (NFC-e)'}</strong><br>
-                        <span>Série: ${nota.serie} | Número: ${nota.nNF} | Protocolo: ${nProt || 'Não Informado'}</span>
+                        <strong>${xNomeEmit} (${CNPJEmit})</strong>
+                        <br>
+                        ${xLgrEmit}, ${nroEmit} - ${xMunEmit}/${UFEmit} - IE: ${IEEmit}
                     </div>
 
                     <div class="danfe-section">
-                        <h4>Emitente</h4>
+                        <h4>Dados da Nota</h4>
                         <div class="danfe-detail-line">
-                            <div class="danfe-detail-item" style="flex: 2;">
-                                <strong>Nome/Razão Social</strong>
-                                ${xNomeEmit}
+                            <div class="danfe-detail-item">
+                                <strong>Número / Série</strong>
+                                ${nota.nNF} / ${nota.serie}
                             </div>
                             <div class="danfe-detail-item">
-                                <strong>CNPJ</strong>
-                                ${CNPJEmit}
-                            </div>
-                            <div class="danfe-detail-item">
-                                <strong>Inscrição Estadual</strong>
-                                ${IEEmit}
-                            </div>
-                        </div>
-                         <div class="danfe-detail-line">
-                            <div class="danfe-detail-item" style="flex: 3;">
-                                <strong>Endereço</strong>
-                                ${xLgrEmit}, ${nroEmit} - ${xMunEmit}/${UFEmit}
+                                <strong>Emissão</strong>
+                                ${formatarData(dhEmi)}
                             </div>
                             <div class="danfe-detail-item">
                                 <strong>Natureza da Operação</strong>
                                 ${natOp}
                             </div>
                             <div class="danfe-detail-item">
-                                <strong>Data/Hora Emissão</strong>
-                                ${formatarData(dhEmi)}
+                                <strong>Protocolo de Autorização</strong>
+                                ${nProt}
                             </div>
                         </div>
                     </div>
-
+                    
                     <div class="danfe-section">
-                        <h4>Destinatário / Consumidor Final</h4>
+                        <h4>Destinatário</h4>
                         <div class="danfe-detail-line">
                             <div class="danfe-detail-item" style="flex: 2;">
-                                <strong>Nome/Razão Social</strong>
+                                <strong>Nome / Razão Social</strong>
                                 ${xNomeDest}
                             </div>
                             <div class="danfe-detail-item">
                                 <strong>CNPJ/CPF</strong>
                                 ${CNPJDest}
                             </div>
-                            <div class="danfe-detail-item">
-                                <strong>Inscrição Estadual</strong>
+                             <div class="danfe-detail-item">
+                                <strong>IE</strong>
                                 ${IEDest}
                             </div>
                         </div>
-                        ${xLgrDest ? `
                         <div class="danfe-detail-line">
-                             <div class="danfe-detail-item" style="flex: 3;">
+                            <div class="danfe-detail-item" style="flex: 3;">
                                 <strong>Endereço</strong>
-                                ${xLgrDest} - ${xMunDest}/${UFDest}
+                                ${xLgrDest}, ${xMunDest} / ${UFDest}
                             </div>
                         </div>
-                        ` : ''}
                     </div>
 
-                    <div class="danfe-section">
-                        <h4>Itens e Produtos (${itens.length} encontrados)</h4>
-                        ${itensHTML}
-                    </div>
-                    
-                    <div class="danfe-section" style="display: flex; gap: 10px;">
-                        <div style="flex: 1;">
-                            <h4>Valores Fiscais</h4>
+                    ${itensHTML}
+
+                    <div style="display: flex; gap: 10px;">
+                        
+                        <div class="danfe-section" style="flex: 1;">
+                            <h4>Totais e Tributos</h4>
                             <div class="danfe-detail-line">
                                 <div class="danfe-detail-item">
                                     <strong>Valor Total dos Produtos (vProd)</strong>
                                     ${formatarValor(vProd)}
                                 </div>
                                 <div class="danfe-detail-item">
-                                    <strong>Valor do Desconto (vDesc)</strong>
+                                    <strong>Valor Total do Desconto (vDesc)</strong>
                                     ${formatarValor(vDesc)}
                                 </div>
-                                <div class="danfe-detail-item" style="flex: 1.5;">
-                                    <strong>VALOR TOTAL DA NOTA (vNF)</strong>
-                                    <span style="font-size: 11pt; color: #D9531E; font-weight: bold;">${formatarValor(nota.valorNumerico)}</span>
-                                </div>
                             </div>
+                            
                             ${vICMS && isNFe ? `
                             <div class="danfe-detail-line">
                                 <div class="danfe-detail-item">
@@ -1963,19 +2011,22 @@
                                     <strong>Valor IPI (vIPI)</strong>
                                     ${formatarValor(vIPI)}
                                 </div>
-                                <div class="danfe-detail-item">
-                                    <strong>Total Aproximado Tributos (vTotTrib)</strong>
-                                    ${formatarValor(vTotTrib)}
-                                </div>
                             </div>
-                            ` : (vTotTrib && parseFloat(vTotTrib) > 0 ? `
+                            ` : ''}
+
+                            ${vTotTrib ? `
                             <div class="danfe-detail-line">
                                 <div class="danfe-detail-item">
-                                    <strong>Total Aproximado Tributos (vTotTrib)</strong>
+                                    <strong>Valor Aprox. Tributos (vTotTrib)</strong>
                                     ${formatarValor(vTotTrib)}
                                 </div>
                             </div>
-                            ` : '')}
+                            ` : ''}
+                            
+                            <div style="text-align: right; padding-top: 10px; margin-top: 10px; border-top: 1px dashed #ccc;">
+                                <strong>VALOR TOTAL DA NOTA (vNF):</strong>
+                                <span style="font-size: 11pt; color: #D9531E; font-weight: bold;">${formatarValor(nota.valorNumerico)}</span>
+                            </div>
                         </div>
                         
                         ${pagamentoHTML ? `<div style="width: 30%;">${pagamentoHTML}</div>` : ''}
