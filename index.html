@@ -621,7 +621,7 @@
                         <i data-lucide="bot" style="width: 20px;"></i>
                     </div>
                     <div>
-                        <h6 class="m-0 fw-bold">Q.A. Insight Pro <small class="fw-normal opacity-50">v1.3</small></h6>
+                        <h6 class="m-0 fw-bold">Q.A. Insight Pro <small class="fw-normal opacity-50">v1.4</small></h6>
                         <small class="opacity-75" id="aiStatus">Modo Local (Offline)</small>
                     </div>
                 </div>
@@ -994,16 +994,40 @@
                         })
                     });
                 } else if (AI_STATE.provider === 'gemini') {
-                    const modelName = (AI_STATE.model || 'gemini-1.5-flash').toLowerCase().trim();
-                    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+                    // SELF-HEALING LOGIC FOR GEMINI
+                    const tryModels = [AI_STATE.model, 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro'].filter(Boolean);
+                    let lastErr = "";
 
-                    response = await fetch(url, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            contents: [{ parts: [{ text: fullPrompt }] }]
-                        })
-                    });
+                    for (let mName of tryModels) {
+                        const mClean = mName.toLowerCase().trim();
+                        try {
+                            const url = `https://generativelanguage.googleapis.com/v1beta/models/${mClean}:generateContent?key=${apiKey}`;
+                            response = await fetch(url, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ contents: [{ parts: [{ text: fullPrompt }] }] })
+                            });
+                            if (response.ok) break;
+                            const eData = await response.json();
+                            lastErr = eData.error?.message || `Erro ${response.status}`;
+                        } catch (e) { lastErr = e.message; }
+                    }
+
+                    if (!response || !response.ok) {
+                        try {
+                            const lRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+                            const lData = await lRes.json();
+                            if (lData.models) {
+                                const valid = lData.models.find(m => m.supportedGenerationMethods.includes('generateContent'))?.name;
+                                if (valid) response = await fetch(`https://generativelanguage.googleapis.com/v1beta/${valid}:generateContent?key=${apiKey}`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ contents: [{ parts: [{ text: fullPrompt }] }] })
+                                });
+                            }
+                        } catch (e) { }
+                    }
+                    if (!response || !response.ok) throw new Error(lastErr || "Chave sem modelos disponíveis.");
                 }
 
                 if (!response || !response.ok) {
@@ -1046,7 +1070,7 @@
                         target.parentElement.innerHTML = `<div class="p-2 border border-danger rounded mb-2 bg-danger bg-opacity-10" style="font-size: 0.8rem;">
                             <b class="text-danger">Erro na API Cloud:</b><br>
                             ${err.message}<br>
-                            <span class="text-muted small">Dica: Verifique se o nome do modelo está correto (ex: gemini-1.5-flash) ou se a chave tem espaços.</span>
+                            <span class="text-muted small">Dica: Se o erro for 404, sua chave não tem acesso ao modelo escolhido. Tente 'gemini-pro' ou use o botão 'Testar Conectividade'.</span>
                         </div>` + getLocalResponse(text);
                     }
                 }, 800);
