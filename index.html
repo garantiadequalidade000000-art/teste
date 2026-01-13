@@ -413,80 +413,110 @@
             }
         }
 
-        /* AI Chatbot Styles */
+        /* AI Chatbot Styles - PREMIUM RE-DESIGN */
         .chat-trigger {
             position: fixed;
             bottom: 2rem;
             right: 2rem;
-            z-index: 1000;
-            background: var(--primary);
+            z-index: 1100;
+            background: linear-gradient(135deg, var(--primary), #6366f1);
             color: white;
             border: none;
-            padding: 12px 24px;
+            padding: 14px 28px;
             border-radius: 50px;
-            box-shadow: var(--shadow-md);
+            box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.4);
             display: flex;
             align-items: center;
-            gap: 10px;
-            font-weight: 600;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            gap: 12px;
+            font-weight: 700;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .chat-trigger:hover {
             transform: scale(1.05) translateY(-5px);
-            background: var(--primary-hover);
+            box-shadow: 0 15px 30px -5px rgba(79, 70, 229, 0.6);
         }
 
         .chat-window {
             position: fixed;
-            bottom: 5.5rem;
+            bottom: 6rem;
             right: 2rem;
-            width: 380px;
-            height: 520px;
+            width: 420px;
+            height: 600px;
             background: var(--card-bg);
-            border-radius: var(--radius);
-            box-shadow: var(--shadow-md);
+            border-radius: 20px;
+            box-shadow: 0 20px 50px -12px rgb(0 0 0 / 0.25);
             border: 1px solid var(--border-color);
             display: flex;
             flex-direction: column;
-            z-index: 1000;
+            z-index: 1100;
             opacity: 0;
             visibility: hidden;
-            transform: translateY(20px);
-            transition: all 0.3s ease;
+            transform: translateY(30px) scale(0.95);
+            transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+            overflow: hidden;
         }
 
         .chat-window.active {
             opacity: 1;
             visibility: visible;
-            transform: translateY(0);
+            transform: translateY(0) scale(1);
         }
 
         .chat-header {
-            background: var(--primary);
+            background: linear-gradient(135deg, var(--primary), #4338ca);
             color: white;
-            padding: 1.25rem;
-            border-radius: var(--radius) var(--radius) 0 0;
+            padding: 1.5rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
+        .chat-tabs {
+            background: rgba(0, 0, 0, 0.05);
+            padding: 4px;
+            display: flex;
+            gap: 4px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .chat-tab {
+            flex: 1;
+            padding: 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-align: center;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-muted);
+        }
+
+        .chat-tab.active {
+            background: var(--card-bg);
+            color: var(--primary);
+            box-shadow: var(--shadow-sm);
+        }
+
         .chat-messages {
             flex: 1;
-            padding: 1.25rem;
+            padding: 1.5rem;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 1rem;
+            gap: 1.25rem;
+            background: linear-gradient(to bottom, transparent, rgba(79, 70, 229, 0.02));
         }
 
         .message {
             max-width: 85%;
-            padding: 10px 14px;
+            padding: 12px 16px;
             border-radius: 12px;
             font-size: 0.9rem;
-            line-height: 1.5;
+            line-height: 1.6;
+            position: relative;
+            animation: fadeIn 0.3s ease-out;
         }
 
         .message.system {
@@ -494,6 +524,7 @@
             color: var(--text-main);
             align-self: flex-start;
             border-bottom-left-radius: 2px;
+            box-shadow: var(--shadow-sm);
         }
 
         .message.user {
@@ -501,17 +532,66 @@
             color: white;
             align-self: flex-end;
             border-bottom-right-radius: 2px;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
         }
 
         .chat-input-area {
-            padding: 1rem;
+            padding: 1.25rem;
             border-top: 1px solid var(--border-color);
+            background: var(--card-bg);
         }
 
-        .typing-indicator {
-            font-style: italic;
-            color: var(--text-muted);
+        .chat-settings {
+            padding: 1.5rem;
+            display: none;
+            flex-direction: column;
+            gap: 1rem;
+            height: 100%;
+            background: var(--card-bg);
+            overflow-y: auto;
+        }
+
+        .chat-settings.active {
+            display: flex;
+        }
+
+        .api-key-input {
+            font-family: monospace;
             font-size: 0.8rem;
+        }
+
+        .typing-dots {
+            display: inline-flex;
+            gap: 4px;
+        }
+
+        .typing-dots span {
+            width: 4px;
+            height: 4px;
+            background: var(--text-muted);
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+
+        .typing-dots span:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+
+        .typing-dots span:nth-child(2) {
+            animation-delay: -0.16s;
+        }
+
+        @keyframes bounce {
+
+            0%,
+            80%,
+            100% {
+                transform: scale(0);
+            }
+
+            40% {
+                transform: scale(1.0);
+            }
         }
 
         .system-block {
@@ -525,34 +605,100 @@
     <div class="app-container">
         <!-- AI Chatbot Trigger -->
         <button class="chat-trigger no-print" onclick="toggleChat()" id="chatTrigger">
-            <i data-lucide="sparkles"></i>
-            <span>Assistente IA</span>
+            <div class="position-relative">
+                <i data-lucide="sparkles"></i>
+                <span
+                    class="position-absolute top-0 start-100 translate-middle p-1 bg-success border border-light rounded-circle"></span>
+            </div>
+            <span>Assistente Pro</span>
         </button>
 
         <!-- Chat Window -->
         <div class="chat-window no-print" id="chatWindow">
             <div class="chat-header">
-                <div>
-                    <h6 class="m-0 fw-bold">Assistente Q.A. Pro</h6>
-                    <small class="opacity-75">IA Baseada em GPT-5</small>
+                <div class="d-flex align-items-center gap-3">
+                    <div class="p-2 bg-white bg-opacity-25 rounded-circle">
+                        <i data-lucide="bot" style="width: 20px;"></i>
+                    </div>
+                    <div>
+                        <h6 class="m-0 fw-bold">Q.A. Insight Pro</h6>
+                        <small class="opacity-75" id="aiStatus">Modo Local (Offline)</small>
+                    </div>
                 </div>
-                <button class="btn-close btn-close-white" onclick="toggleChat()"></button>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-link text-white p-1" onclick="toggleSettings()" title="Configurações">
+                        <i data-lucide="settings" style="width: 18px;"></i>
+                    </button>
+                    <button class="btn-close btn-close-white" onclick="toggleChat()"></button>
+                </div>
             </div>
+
+            <!-- Tabs -->
+            <div class="chat-tabs" id="chatTabs">
+                <div class="chat-tab active" onclick="switchChatTab('chat')">Conversa</div>
+                <div class="chat-tab" onclick="switchChatTab('settings')">Configurações</div>
+            </div>
+
+            <!-- Chat Content -->
             <div class="chat-messages" id="chatMessages">
                 <div class="message system">
-                    Olá! Sou seu assistente de Q.A. Como posso ajudar com os testes hoje?
-                    <div class="mt-2">
-                        <button class="btn btn-sm btn-outline-primary py-1 px-2 mb-1" onclick="askAICurrentReport()">📊
-                            Analisar Relatório Atual</button>
+                    Olá! Sou seu assistente especializado em Qualidade. Posso analisar seus relatórios ou ajudar com
+                    dúvidas de teste.
+                    <div class="mt-3 d-flex flex-wrap gap-2">
+                        <button class="btn btn-sm btn-light border py-1 px-3 rounded-pill"
+                            onclick="askAICurrentReport()">
+                            📊 Analisar Report
+                        </button>
+                        <button class="btn btn-sm btn-light border py-1 px-3 rounded-pill"
+                            onclick="sendMessage('Como melhorar meus testes?')">
+                            💡 Dicas de Q.A.
+                        </button>
                     </div>
                 </div>
             </div>
-            <div class="chat-input-area">
+
+            <!-- Settings Content (Hidden) -->
+            <div class="chat-settings" id="chatSettings">
+                <h6 class="fw-bold mb-3">Configurações de IA</h6>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Provedor</label>
+                    <select class="form-select form-select-sm" id="aiProvider" onchange="updateProviderFields()">
+                        <option value="local">Local (Sem API Key)</option>
+                        <option value="openai">OpenAI (GPT-4o/3.5)</option>
+                        <option value="gemini">Google Gemini</option>
+                        <option value="vercel">Vercel Gateway (Existente)</option>
+                    </select>
+                </div>
+
+                <div id="apiKeySection" style="display: none;">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">API Key</label>
+                        <input type="password" id="apiKeyInput" class="form-control form-control-sm api-key-input"
+                            placeholder="sk-...">
+                    </div>
+                    <div class="mb-3" id="modelSection">
+                        <label class="form-label small fw-bold">Modelo</label>
+                        <input type="text" id="apiModelInput" class="form-control form-control-sm" placeholder="gpt-4o">
+                    </div>
+                </div>
+
+                <div class="mt-auto p-3 bg-light rounded-3">
+                    <p class="small text-muted mb-0">
+                        <i data-lucide="info" style="width: 14px;"></i>
+                        As chaves são armazenadas apenas localmente no seu navegador.
+                    </p>
+                </div>
+                <button class="btn btn-primary btn-sm mt-3" onclick="saveAISettings()">Salvar e Voltar</button>
+            </div>
+
+            <!-- Input Area -->
+            <div class="chat-input-area" id="inputArea">
                 <div class="input-group">
-                    <input type="text" id="chatInput" class="form-control" placeholder="Pergunte algo..."
-                        onkeypress="handleChatKey(event)">
-                    <button class="btn btn-primary" onclick="sendMessage()">
-                        <i data-lucide="send" style="width: 16px;"></i>
+                    <input type="text" id="chatInput" class="form-control border-0 bg-light"
+                        placeholder="Envie uma mensagem..." onkeypress="handleChatKey(event)">
+                    <button class="btn btn-primary px-3" onclick="sendMessage()">
+                        <i data-lucide="send" style="width: 18px;"></i>
                     </button>
                 </div>
             </div>
@@ -652,28 +798,100 @@
     </div>
 
     <script>
-        // CORE LOGIC - PRESERVED AS REQUESTED
+        // CORE LOGIC 
         let allData = [];
         let statusChart, typeChart;
         const colors = { passou: '#10b981', falhou: '#ef4444', bloqueado: '#f59e0b', sugestao: '#06b6d4' };
 
-        // AI Chat Config
-        const AI_CONFIG = {
-            url: "https://ai-gateway.vercel.sh/v1/chat/completions",
-            key: "vck_7QcCw7xb8C2S6kZlZvPvkQyQUaanqheugRWbioryoj8Lws8Rd33mEzpq",
-            model: "gpt-4o" // Updated to a more standard model
+        // AI Chat Enhanced Config
+        let AI_STATE = {
+            provider: localStorage.getItem('qa-ai-provider') || 'local',
+            key: localStorage.getItem('qa-ai-key') || '',
+            model: localStorage.getItem('qa-ai-model') || 'gpt-4o',
+            history: []
         };
 
         // Initialize Lucide Icons
         lucide.createIcons();
 
-        // Chat UI Logic
+        // Chat UI Toggle
         function toggleChat() {
             const chat = document.getElementById('chatWindow');
-            const trigger = document.getElementById('chatTrigger');
             chat.classList.toggle('active');
-            trigger.classList.toggle('d-none');
         }
+
+        function toggleSettings() {
+            const settings = document.getElementById('chatSettings');
+            const messages = document.getElementById('chatMessages');
+            const input = document.getElementById('inputArea');
+            const tabs = document.getElementById('chatTabs');
+
+            settings.classList.toggle('active');
+            if (settings.classList.contains('active')) {
+                messages.style.display = 'none';
+                input.style.display = 'none';
+                switchChatTab('settings');
+            } else {
+                messages.style.display = 'flex';
+                input.style.display = 'block';
+                switchChatTab('chat');
+            }
+        }
+
+        function switchChatTab(tab) {
+            const tabs = document.querySelectorAll('.chat-tab');
+            tabs.forEach(t => t.classList.remove('active'));
+            if (tab === 'chat') {
+                tabs[0].classList.add('active');
+                document.getElementById('chatSettings').classList.remove('active');
+                document.getElementById('chatMessages').style.display = 'flex';
+                document.getElementById('inputArea').style.display = 'block';
+            } else {
+                tabs[1].classList.add('active');
+                document.getElementById('chatSettings').classList.add('active');
+                document.getElementById('chatMessages').style.display = 'none';
+                document.getElementById('inputArea').style.display = 'none';
+            }
+        }
+
+        function updateProviderFields() {
+            const provider = document.getElementById('aiProvider').value;
+            const keySection = document.getElementById('apiKeySection');
+            const modelSection = document.getElementById('modelSection');
+
+            if (provider === 'local') {
+                keySection.style.display = 'none';
+            } else {
+                keySection.style.display = 'block';
+                modelSection.style.display = (provider === 'gemini') ? 'none' : 'block';
+            }
+        }
+
+        function saveAISettings() {
+            AI_STATE.provider = document.getElementById('aiProvider').value;
+            AI_STATE.key = document.getElementById('apiKeyInput').value;
+            AI_STATE.model = document.getElementById('apiModelInput').value || 'gpt-4o';
+
+            localStorage.setItem('qa-ai-provider', AI_STATE.provider);
+            localStorage.setItem('qa-ai-key', AI_STATE.key);
+            localStorage.setItem('qa-ai-model', AI_STATE.model);
+
+            document.getElementById('aiStatus').innerText = AI_STATE.provider === 'local' ? 'Modo Local' : 'IA Cloud Ativa';
+            toggleSettings();
+        }
+
+        // Pre-fill settings
+        window.addEventListener('DOMContentLoaded', () => {
+            const provEl = document.getElementById('aiProvider');
+            const keyEl = document.getElementById('apiKeyInput');
+            const modEl = document.getElementById('apiModelInput');
+            if (provEl) provEl.value = AI_STATE.provider;
+            if (keyEl) keyEl.value = AI_STATE.key;
+            if (modEl) modEl.value = AI_STATE.model;
+            const statusEl = document.getElementById('aiStatus');
+            if (statusEl) statusEl.innerText = AI_STATE.provider === 'local' ? 'Modo Local' : 'IA Cloud Ativa';
+            updateProviderFields();
+        });
 
         function handleChatKey(e) {
             if (e.key === 'Enter') sendMessage();
@@ -688,46 +906,32 @@
             container.scrollTop = container.scrollHeight;
         }
 
-        // Logic for Simulated Response when API fails
-        function getSimulatedResponse(text) {
+        // Logic for Intelligent Analysis (Local)
+        function getLocalResponse(text) {
             const lowText = text.toLowerCase();
 
-            if (lowText.includes("analise") || lowText.includes("insight") || lowText.includes("status")) {
-                if (allData.length === 0) return "Ainda não identifiquei dados no relatório. Por favor, adicione algumas tarefas no painel lateral para que eu possa analisar o desempenho dos testes.";
+            if (lowText.includes("analise") || lowText.includes("report") || lowText.includes("status")) {
+                if (allData.length === 0) return "Ainda não há dados para analisar. Adicione tarefas no menu lateral! 🚀";
 
                 let totalTasks = 0;
                 let passed = 0;
                 let failed = 0;
-                let blocked = 0;
-                let suggestion = 0;
-
                 allData.forEach(s => {
                     totalTasks += s.tasks.length;
                     passed += s.tasks.filter(t => t.status === 'PASSOU').length;
                     failed += s.tasks.filter(t => t.status === 'FALHOU').length;
-                    blocked += s.tasks.filter(t => t.status === 'BLOQUEADO').length;
-                    suggestion += s.tasks.filter(t => t.status === 'SUGESTÃO').length;
                 });
 
                 const percentage = totalTasks > 0 ? ((passed / totalTasks) * 100).toFixed(1) : 0;
 
-                let insight = "";
-                if (failed > 0) insight = "⚠️ **Atenção:** Identifiquei falhas que podem impactar a entrega. Recomendo priorizar as correções de 'Retorno' e 'Correção'.";
-                else if (percentage > 90) insight = "🚀 **Excelente:** Os testes estão com um índice de aprovação muito alto. O sistema parece estável.";
-                else insight = "📈 **Status:** O relatório está sendo construído. Continue validando os cenários restantes.";
-
-                return `**Resumo da Análise Q.A.:**<br><br>` +
-                    `• Total de Tarefas: **${totalTasks}**<br>` +
-                    `• Taxa de Sucesso: **${percentage}%**<br>` +
-                    `• Pendências/Falhas: **${failed}**<br><br>` +
-                    `${insight}`;
+                return `### 📊 Insight Local<br><br>` +
+                    `• Cobertura: **${totalTasks}** cenários<br>` +
+                    `• Sucesso: **${percentage}%**<br>` +
+                    `• Críticos: **${failed}** falhas encontradas.<br><br>` +
+                    `Dica: Use uma API Key para análise comportamental avançada!`;
             }
 
-            if (lowText.includes("ajuda") || lowText.includes("olá") || lowText.includes("oi")) {
-                return "Olá! Sou seu assistente técnico. Posso analisar os dados do seu relatório, calcular métricas de qualidade ou ajudar você a entender o status dos sistemas testados. Como posso ser útil agora?";
-            }
-
-            return "Entendi seu ponto. Como assistente de Q.A., estou monitorando a integridade dos dados deste relatório. Deseja que eu gere um insight detalhado sobre algum sistema específico ou sobre o consolidado geral?";
+            return "Olá! Estou operando em **Modo Local**. Posso processar estatísticas do seu relatório atual. Para discussões complexas sobre arquitetura de testes, ative o modo **OpenAI** ou **Gemini** nas configurações! ⚙️";
         }
 
         async function sendMessage(overrideText = null) {
@@ -739,56 +943,69 @@
             appendMessage('user', text);
 
             const loadingId = 'loading-' + Date.now();
-            appendMessage('system', `<span id="${loadingId}">Analisando...</span>`);
+            appendMessage('system', `<div id="${loadingId}" class="typing-dots"><span></span><span></span><span></span></div>`);
+
+            // Context Injection
+            let fullPrompt = text;
+            if (allData.length > 0) {
+                fullPrompt = `CONTEXTO DO RELATÓRIO Q.A.:\n${JSON.stringify(allData)}\n\nPERGUNTA DO USUÁRIO: ${text}`;
+            }
 
             try {
-                // Tentativa de chamada real (sujeita a CORS/Rede)
-                const response = await fetch(AI_CONFIG.url, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${AI_CONFIG.key}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        model: AI_CONFIG.model,
-                        messages: [{ role: 'user', content: text }],
-                        stream: false
-                    })
-                });
+                if (AI_STATE.provider === 'local' || !AI_STATE.key) {
+                    throw new Error("USE_LOCAL");
+                }
 
-                if (!response.ok) throw new Error("API_UNREACHABLE");
+                let response;
+                if (AI_STATE.provider === 'openai' || AI_STATE.provider === 'vercel') {
+                    const url = AI_STATE.provider === 'vercel' ? "https://ai-gateway.vercel.sh/v1/chat/completions" : "https://api.openai.com/v1/chat/completions";
+                    response = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${AI_STATE.key}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            model: AI_STATE.model,
+                            messages: [{ role: 'user', content: fullPrompt }],
+                            temperature: 0.7
+                        })
+                    });
+                } else if (AI_STATE.provider === 'gemini') {
+                    response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${AI_STATE.key}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: fullPrompt }] }]
+                        })
+                    });
+                }
+
+                if (!response || !response.ok) throw new Error("API_ERROR");
 
                 const data = await response.json();
-                let aiResponse = data.choices[0].message.content;
-                aiResponse = aiResponse.replace(/\n/g, '<br>');
+                let aiResponse = "";
+
+                if (AI_STATE.provider === 'gemini') {
+                    aiResponse = data.candidates[0].content.parts[0].text;
+                } else {
+                    aiResponse = data.choices[0].message.content;
+                }
+
+                aiResponse = aiResponse.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
                 document.getElementById(loadingId).parentElement.innerHTML = aiResponse;
 
             } catch (err) {
-                // FALLBACK: Se falhar (CORS ou Off-line), usa a simulação inteligente para não mostrar erro
-                console.warn("Redirecionando para Processamento Local (Offline Mode)");
-
                 setTimeout(() => {
-                    const aiResponse = getSimulatedResponse(text);
+                    const aiResponse = getLocalResponse(text);
                     const target = document.getElementById(loadingId);
-                    if (target) {
-                        target.parentElement.innerHTML = aiResponse;
-                    }
+                    if (target) target.parentElement.innerHTML = aiResponse;
                 }, 800);
             }
         }
 
         function askAICurrentReport() {
-            if (allData.length === 0) return alert("Adicione alguns dados primeiro!");
-            const reportSummary = allData.map(s => {
-                const counts = s.tasks.reduce((acc, t) => {
-                    acc[t.status] = (acc[t.status] || 0) + 1;
-                    return acc;
-                }, {});
-                return `Sistema: ${s.name} - ${JSON.stringify(counts)}`;
-            }).join('\n');
-
-            const prompt = `Analise este resumo de relatório de Q.A. e me dê um insight rápido sobre o status atual:\n${reportSummary}`;
-            sendMessage(prompt);
+            sendMessage("Analise meu relatório atual e me dê um feedback sobre a qualidade do sistema.");
         }
 
         // Theme Toggle Logic
@@ -821,18 +1038,8 @@
             const gridColor = getComputedStyle(document.documentElement).getPropertyValue('--chart-grid').trim();
             const textColor = getComputedStyle(document.documentElement).getPropertyValue('--chart-text').trim();
 
-            const chartOptionsUpdates = {
-                plugins: {
-                    title: { color: textColor },
-                    legend: { labels: { color: textColor } }
-                }
-            };
-
-            // Status Chart Updates
             statusChart.options.plugins.title.color = textColor;
             statusChart.options.plugins.legend.labels.color = textColor;
-
-            // Type Chart Updates
             typeChart.options.plugins.title.color = textColor;
             typeChart.options.scales.x.ticks.color = textColor;
             typeChart.options.scales.y.ticks.color = textColor;
@@ -843,7 +1050,6 @@
             typeChart.update();
         }
 
-        // Identifica links, remove duplicados e resíduos, exibe apenas UM
         function linkify(text) {
             const urlRegex = /(https?:\/\/[^\s\)\}\]]+)/g;
             const matches = text.match(urlRegex) || [];
@@ -873,24 +1079,18 @@
             const newTasks = chunks.map(chunk => {
                 const low = chunk.toLowerCase();
                 let status = 'PASSOU', type = 'Validada', border = 'status-passou', badge = 'bg-success';
-
                 if (low.includes('correção')) { status = 'FALHOU'; type = 'Correção'; border = 'status-falhou'; badge = 'bg-danger'; }
                 else if (low.includes('retorno')) { status = 'BLOQUEADO'; type = 'Retorno'; border = 'status-bloqueado'; badge = 'bg-warning text-dark'; }
                 else if (low.includes('sugestão')) { status = 'SUGESTÃO'; type = 'Sugestão'; border = 'status-sugestao'; badge = 'bg-info'; }
 
                 const cleanDesc = chunk.replace(/^(validada|correção|retorno|sugestão)[:\s\-\[\]\*\+]*/gi, '').trim();
                 const title = cleanDesc.split('\n')[0].substring(0, 80);
-
                 return { title, status, type, border, badge, full: linkify(cleanDesc) };
             });
 
-            // Agrupamento por Sistema
             const existingSystem = allData.find(s => s.name.toLowerCase() === sysName.toLowerCase());
-            if (existingSystem) {
-                existingSystem.tasks.push(...newTasks);
-            } else {
-                allData.push({ name: sysName, tasks: newTasks });
-            }
+            if (existingSystem) existingSystem.tasks.push(...newTasks);
+            else allData.push({ name: sysName, tasks: newTasks });
 
             document.getElementById('genDate').innerText = new Date().toLocaleString('pt-BR');
             renderAll();
@@ -932,21 +1132,17 @@
                             <div class="task-description">${t.full}</div>
                         </div>
                     `).join('')}
-                </div>
-            `;
+                </div>`;
                 wrapper.appendChild(block);
             });
 
-            // Update Icons for new content
             lucide.createIcons();
-
             document.getElementById('globalCount').innerText = Object.values(globalS).reduce((a, b) => a + b, 0);
             document.getElementById('globalSummary').innerHTML = `
-            <span class="badge bg-success opacity-75">Passou: ${globalS.PASSOU}</span>
-            <span class="badge bg-danger opacity-75">Falhou: ${globalS.FALHOU}</span>
-            <span class="badge bg-warning text-dark opacity-75">Bloqueado: ${globalS.BLOQUEADO}</span>
-            <span class="badge bg-info opacity-75">Sugestão: ${globalS.SUGESTÃO}</span>
-        `;
+                <span class="badge bg-success opacity-75">Passou: ${globalS.PASSOU}</span>
+                <span class="badge bg-danger opacity-75">Falhou: ${globalS.FALHOU}</span>
+                <span class="badge bg-warning text-dark opacity-75">Bloqueado: ${globalS.BLOQUEADO}</span>
+                <span class="badge bg-info opacity-75">Sugestão: ${globalS.SUGESTÃO}</span>`;
             updateCharts(globalS);
         }
 
