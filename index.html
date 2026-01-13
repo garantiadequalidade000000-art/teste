@@ -621,7 +621,7 @@
                         <i data-lucide="bot" style="width: 20px;"></i>
                     </div>
                     <div>
-                        <h6 class="m-0 fw-bold">Q.A. Insight Pro</h6>
+                        <h6 class="m-0 fw-bold">Q.A. Insight Pro <small class="fw-normal opacity-50">v1.1</small></h6>
                         <small class="opacity-75" id="aiStatus">Modo Local (Offline)</small>
                     </div>
                 </div>
@@ -967,7 +967,8 @@
             }
 
             try {
-                if (AI_STATE.provider === 'local' || !AI_STATE.key) {
+                const apiKey = AI_STATE.key ? AI_STATE.key.trim() : '';
+                if (AI_STATE.provider === 'local' || !apiKey) {
                     throw new Error("USE_LOCAL");
                 }
 
@@ -977,18 +978,22 @@
                     response = await fetch(url, {
                         method: 'POST',
                         headers: {
-                            'Authorization': `Bearer ${AI_STATE.key}`,
+                            'Authorization': `Bearer ${apiKey}`,
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
-                            model: AI_STATE.model,
+                            model: AI_STATE.model || 'gpt-4o',
                             messages: [{ role: 'user', content: fullPrompt }],
                             temperature: 0.7
                         })
                     });
                 } else if (AI_STATE.provider === 'gemini') {
-                    const model = (AI_STATE.model || 'gemini-1.5-flash').toLowerCase().trim();
-                    response = await fetch(`https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${AI_STATE.key}`, {
+                    // Gemini 1.5 Flash usually works best on v1beta or v1 with this exact name
+                    let modelName = (AI_STATE.model || 'gemini-1.5-flash').toLowerCase().trim();
+                    if (!modelName.includes('gemini-')) modelName = 'gemini-1.5-flash';
+
+                    // Try v1beta as it's more permissive for flash
+                    response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -999,8 +1004,9 @@
 
                 if (!response || !response.ok) {
                     const errData = await response.json().catch(() => ({}));
-                    console.error("API Error:", errData);
-                    throw new Error(errData.error?.message || `API Error ${response.status}`);
+                    const errorMsg = errData[0]?.error?.message || errData.error?.message || `Erro ${response.status}`;
+                    console.error("API Error Detail:", errData);
+                    throw new Error(errorMsg);
                 }
 
                 const data = await response.json();
@@ -1009,8 +1015,10 @@
                 if (AI_STATE.provider === 'gemini') {
                     if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
                         aiResponse = data.candidates[0].content.parts[0].text;
+                    } else if (data.promptFeedback?.blockReason) {
+                        throw new Error(`Bloqueado por segurança: ${data.promptFeedback.blockReason}`);
                     } else {
-                        throw new Error("Resposta vazia ou bloqueada por segurança.");
+                        throw new Error("Resposta vazia da API Gemini.");
                     }
                 } else {
                     aiResponse = data.choices[0].message.content;
@@ -1021,7 +1029,7 @@
                 if (target) target.parentElement.innerHTML = aiResponse;
 
             } catch (err) {
-                console.warn("Falling back to local insight:", err.message);
+                console.warn("Fallback Error:", err.message);
                 setTimeout(() => {
                     const target = document.getElementById(loadingId);
                     if (!target) return;
@@ -1032,7 +1040,7 @@
                         target.parentElement.innerHTML = `<div class="p-2 border border-danger rounded mb-2 bg-danger bg-opacity-10" style="font-size: 0.8rem;">
                             <b class="text-danger">Erro na API Cloud:</b><br>
                             ${err.message}<br>
-                            <span class="text-muted">Certifique-se que sua chave está correta. Usando modo offline...</span>
+                            <span class="text-muted small">Dica: Verifique se o nome do modelo está correto (ex: gemini-1.5-flash) ou se a chave tem espaços.</span>
                         </div>` + getLocalResponse(text);
                     }
                 }, 800);
