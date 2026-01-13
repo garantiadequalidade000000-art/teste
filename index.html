@@ -858,19 +858,31 @@
             const provider = document.getElementById('aiProvider').value;
             const keySection = document.getElementById('apiKeySection');
             const modelSection = document.getElementById('modelSection');
+            const modelInput = document.getElementById('apiModelInput');
 
             if (provider === 'local') {
                 keySection.style.display = 'none';
             } else {
                 keySection.style.display = 'block';
-                modelSection.style.display = (provider === 'gemini') ? 'none' : 'block';
+                modelSection.style.display = 'block';
+                modelInput.placeholder = (provider === 'gemini') ? 'gemini-1.5-flash' : 'gpt-4o';
             }
         }
 
         function saveAISettings() {
-            AI_STATE.provider = document.getElementById('aiProvider').value;
-            AI_STATE.key = document.getElementById('apiKeyInput').value;
-            AI_STATE.model = document.getElementById('apiModelInput').value || 'gpt-4o';
+            const provider = document.getElementById('aiProvider').value;
+            const key = document.getElementById('apiKeyInput').value;
+            const modelInput = document.getElementById('apiModelInput').value.trim();
+
+            AI_STATE.provider = provider;
+            AI_STATE.key = key;
+
+            // Set reasonable defaults if model is empty
+            if (modelInput) {
+                AI_STATE.model = modelInput;
+            } else {
+                AI_STATE.model = (provider === 'gemini') ? 'gemini-1.5-flash' : 'gpt-4o';
+            }
 
             localStorage.setItem('qa-ai-provider', AI_STATE.provider);
             localStorage.setItem('qa-ai-key', AI_STATE.key);
@@ -945,10 +957,13 @@
             const loadingId = 'loading-' + Date.now();
             appendMessage('system', `<div id="${loadingId}" class="typing-dots"><span></span><span></span><span></span></div>`);
 
-            // Context Injection
+            // Context Injection (Concise)
             let fullPrompt = text;
             if (allData.length > 0) {
-                fullPrompt = `CONTEXTO DO RELATÓRIO Q.A.:\n${JSON.stringify(allData)}\n\nPERGUNTA DO USUÁRIO: ${text}`;
+                const summary = allData.map(s => {
+                    return `Sistema: ${s.name}\nTasks: ${s.tasks.map(t => `[${t.status}] ${t.title}`).join(', ')}`;
+                }).join('\n\n');
+                fullPrompt = `DADOS DO RELATÓRIO Q.A.:\n${summary}\n\nPERGUNTA: ${text}`;
             }
 
             try {
@@ -972,7 +987,8 @@
                         })
                     });
                 } else if (AI_STATE.provider === 'gemini') {
-                    response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${AI_STATE.key}`, {
+                    const model = AI_STATE.model.includes('gemini') ? AI_STATE.model : 'gemini-1.5-flash';
+                    response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${AI_STATE.key}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -981,25 +997,44 @@
                     });
                 }
 
-                if (!response || !response.ok) throw new Error("API_ERROR");
+                if (!response || !response.ok) {
+                    const errData = await response.json().catch(() => ({}));
+                    console.error("API Error:", errData);
+                    throw new Error(errData.error?.message || `API Error ${response.status}`);
+                }
 
                 const data = await response.json();
                 let aiResponse = "";
 
                 if (AI_STATE.provider === 'gemini') {
-                    aiResponse = data.candidates[0].content.parts[0].text;
+                    if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
+                        aiResponse = data.candidates[0].content.parts[0].text;
+                    } else {
+                        throw new Error("Resposta vazia ou bloqueada por segurança.");
+                    }
                 } else {
                     aiResponse = data.choices[0].message.content;
                 }
 
                 aiResponse = aiResponse.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
-                document.getElementById(loadingId).parentElement.innerHTML = aiResponse;
+                const target = document.getElementById(loadingId);
+                if (target) target.parentElement.innerHTML = aiResponse;
 
             } catch (err) {
+                console.warn("Falling back to local insight:", err.message);
                 setTimeout(() => {
-                    const aiResponse = getLocalResponse(text);
                     const target = document.getElementById(loadingId);
-                    if (target) target.parentElement.innerHTML = aiResponse;
+                    if (!target) return;
+
+                    if (err.message === "USE_LOCAL") {
+                        target.parentElement.innerHTML = getLocalResponse(text);
+                    } else {
+                        target.parentElement.innerHTML = `<div class="p-2 border border-danger rounded mb-2 bg-danger bg-opacity-10" style="font-size: 0.8rem;">
+                            <b class="text-danger">Erro na API Cloud:</b><br>
+                            ${err.message}<br>
+                            <span class="text-muted">Certifique-se que sua chave está correta. Usando modo offline...</span>
+                        </div>` + getLocalResponse(text);
+                    }
                 }, 800);
             }
         }
