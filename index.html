@@ -1072,51 +1072,51 @@
                 document.getElementById('config-modal').style.display = 'flex';
             } else {
                 alert("Senha do evento incorreta.");
-                document.getElementById('admin-pass-input').value = '';
+                documento.obterElementoPorId('entrada-de-passagem-de-administrador').valor = '';
             }
         }
-        function closeShareModal() { document.getElementById('share-modal').style.display = 'none'; }
-        function openShareModal() {
-            const modal = document.getElementById('share-modal');
-            const url = new URL(window.location.href);
-            url.searchParams.set('event', currentEvent);
+        função fecharCompartilharModal() { documento.obterElementoPorId('modal compartilhado').estilo.exibir = 'nenhum'; }
+        função openShareModal() {
+            const modal = documento.obterElementoPorId('modal compartilhado');
+            const url = novo URL(janela.localização.href);
+            url.parâmetros de pesquisa.definir('evento', evento atual);
 
-            // "Criptografa" (Codifica em Base64) a senha para não ficar visível no link
-            const encodedPass = btoa(currentEventPass);
-            url.searchParams.set('pwd', encodedPass);
+            // "Criptografia" (Codifica em Base64) a senha para não ficar visual no link
+            const senha codificada = btoa(atualEventPass);
+            url.parâmetros de pesquisa.definir('pwd', senha codificada);
 
-            const fullUrl = url.toString();
-            document.getElementById('share-url').value = fullUrl;
-            modal.style.display = 'flex';
-            document.getElementById('qrcode').innerHTML = '';
-            new QRCode(document.getElementById('qrcode'), { text: fullUrl, width: 200, height: 200 });
+            const URL completa = url.corda de segurança();
+            documento.obterElementoPorId('url de compartilhamento').valor = URL completa;
+            modal.estilo.exibir = 'flexível';
+            documento.obterElementoPorId('qrcode').HTML interno = '';
+            novo Código QRC(documento.obterElementoPorId('qrcode'), { texto: URL completa, largura: 200, altura: 200 });
         }
-        function copyShareUrl() {
-            const input = document.getElementById('share-url');
-            input.select();
-            navigator.clipboard.writeText(input.value);
-            alert("Link copiado!");
+        função copiarCompartilharUrl() {
+            const entrada = documento.obterElementoPorId('url de compartilhamento');
+            entrada.selecionar();
+            navegador.área de transferência.escreverTexto(entrada.valor);
+            alerta("Link copiado!");
         }
-        async function deletePhoto(imageUrl) {
-            if (!confirm("Excluir?")) return;
-            try {
-                await fetch(GAS_WEBAPP_URL, {
-                    method: 'POST', mode: 'no-cors',
-                    body: JSON.stringify({ action: 'delete', imageUrl, userName: currentUserName, eventId: currentEvent })
+        assíncrono função excluirFoto(imagemUrl) {
+            se (!confirmar("Excluir?")) retornar;
+            tentar {
+                esperar buscar(GAS_WEBAPP_URL, {
+                    método: 'POSTAGEM', modo: 'sem cors',
+                    corpo: JSON.stringificar({ ação: 'excluir', imagemUrl, nome de usuário: nome de usuário atual, ID do evento: evento atual })
                 });
-                refreshPhotos();
-            } catch (err) { alert("Erro."); }
+                atualizarFotos();
+            } pegar (errar) { alerta("Erro."); }
         }
-        async function handleUniqueIdSuggestion() {
-            const idInput = document.getElementById('event-id');
-            const res = await fetch(`${GAS_WEBAPP_URL}?eventId=${idInput.value.trim().toUpperCase()}`);
-            const data = await res.json();
-            if (data.photos && data.photos.length > 0) {
-                const newId = idInput.value.trim().toUpperCase() + Math.floor(Math.random() * 100);
-                idInput.value = newId; alert("Sugestão: " + newId);
-            } else { alert("Disponível!"); }
+        assíncrono função handleUniqueIdSugestão() {
+            const entrada de ID = documento.obterElementoPorId('id do evento');
+            const res = esperar buscar(`${GAS_WEBAPP_URL}?eventoId=${entrada de ID.valor.aparar().para a caixa superior()}`);
+            const dados = esperar res.json();
+            se (dados.fotos && dados.fotos.comprimento > 0) {
+                const novoId = entrada de ID.valor.aparar().para a caixa superior() + Matemática.chão(Matemática.aleatório() * 100);
+                entrada de ID.valor = novoId; alerta("Sugestão: " + novoId);
+            } outro { alerta("Desonível!"); }
         }
-    </script>
-</body>
+    </roteiro>
+</corpo>
 
-</html>
+        </HTML>
