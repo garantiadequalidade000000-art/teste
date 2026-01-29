@@ -12,7 +12,7 @@
 
     <!-- Google Fonts -->
     <link
-        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Poppins:wght@300;400;600&family=Montserrat:wght@300;400;700&family=Dancing+Script:wght@400..700&family=Roboto+Mono&family=Luckiest+Guy&family=Pacifico&family=Great+Vibes&family=Alex+Brush&family=Caveat:wght@400;700&family=Bebas+Neue&family=Indie+Flower&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Michroma&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Poppins:wght@300;400;600&family=Montserrat:wght@300;400;700&family=Dancing+Script:wght@400..700&family=Roboto+Mono&family=Luckiest+Guy&family=Pacifico&family=Great+Vibes&family=Alex+Brush&family=Caveat:wght@400;700&family=Bebas+Neue&family=Indie+Flower&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap"
         rel="stylesheet">
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -132,8 +132,71 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 70vh;
+            min-height: 85vh;
             text-align: center;
+            font-family: 'Michroma', sans-serif;
+        }
+
+        #join-screen h2 {
+            font-family: 'Michroma', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-size: 1.5rem;
+        }
+
+        .main-logo {
+            margin-bottom: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            animation: logoFloat 3s ease-in-out infinite;
+        }
+
+        @keyframes logoFloat {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        .logo-circle {
+            width: 100px;
+            height: 100px;
+            border: 4px solid var(--primary);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            background: rgba(99, 102, 241, 0.1);
+            box-shadow: 0 0 30px rgba(99, 102, 241, 0.3);
+        }
+
+        .logo-circle::after {
+            content: "";
+            position: absolute;
+            width: 70%;
+            height: 70%;
+            border: 2px solid var(--accent);
+            border-radius: 50%;
+            opacity: 0.5;
+        }
+
+        .logo-text {
+            font-size: 2.5rem;
+            font-weight: 700;
+            letter-spacing: 5px;
+            text-transform: uppercase;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 10px rgba(99, 102, 241, 0.5));
         }
 
         .glass-card {
@@ -487,6 +550,15 @@
 
         <!-- Join Screen -->
         <section id="join-screen">
+            <div id="join-screen::before"></div>
+
+            <div class="main-logo">
+                <div class="logo-circle">
+                    <i data-lucide="camera" size="48" style="color: var(--text);"></i>
+                </div>
+                <div class="logo-text">CAMON</div>
+            </div>
+
             <div class="glass-card">
                 <h2 style="margin-bottom: 10px;">Bem-vindo ao Evento</h2>
                 <p style="color: var(--text-muted); margin-bottom: 30px;">Entre com o código do evento para começar a
@@ -1072,51 +1144,51 @@
                 document.getElementById('config-modal').style.display = 'flex';
             } else {
                 alert("Senha do evento incorreta.");
-                documento.obterElementoPorId('entrada-de-passagem-de-administrador').valor = '';
+                document.getElementById('admin-pass-input').value = '';
             }
         }
-        função fecharCompartilharModal() { documento.obterElementoPorId('modal compartilhado').estilo.exibir = 'nenhum'; }
-        função openShareModal() {
-            const modal = documento.obterElementoPorId('modal compartilhado');
-            const url = novo URL(janela.localização.href);
-            url.parâmetros de pesquisa.definir('evento', evento atual);
+        function closeShareModal() { document.getElementById('share-modal').style.display = 'none'; }
+        function openShareModal() {
+            const modal = document.getElementById('share-modal');
+            const url = new URL(window.location.href);
+            url.searchParams.set('event', currentEvent);
 
-            // "Criptografia" (Codifica em Base64) a senha para não ficar visual no link
-            const senha codificada = btoa(atualEventPass);
-            url.parâmetros de pesquisa.definir('pwd', senha codificada);
+            // "Criptografa" (Codifica em Base64) a senha para não ficar visível no link
+            const encodedPass = btoa(currentEventPass);
+            url.searchParams.set('pwd', encodedPass);
 
-            const URL completa = url.corda de segurança();
-            documento.obterElementoPorId('url de compartilhamento').valor = URL completa;
-            modal.estilo.exibir = 'flexível';
-            documento.obterElementoPorId('qrcode').HTML interno = '';
-            novo Código QRC(documento.obterElementoPorId('qrcode'), { texto: URL completa, largura: 200, altura: 200 });
+            const fullUrl = url.toString();
+            document.getElementById('share-url').value = fullUrl;
+            modal.style.display = 'flex';
+            document.getElementById('qrcode').innerHTML = '';
+            new QRCode(document.getElementById('qrcode'), { text: fullUrl, width: 200, height: 200 });
         }
-        função copiarCompartilharUrl() {
-            const entrada = documento.obterElementoPorId('url de compartilhamento');
-            entrada.selecionar();
-            navegador.área de transferência.escreverTexto(entrada.valor);
-            alerta("Link copiado!");
+        function copyShareUrl() {
+            const input = document.getElementById('share-url');
+            input.select();
+            navigator.clipboard.writeText(input.value);
+            alert("Link copiado!");
         }
-        assíncrono função excluirFoto(imagemUrl) {
-            se (!confirmar("Excluir?")) retornar;
-            tentar {
-                esperar buscar(GAS_WEBAPP_URL, {
-                    método: 'POSTAGEM', modo: 'sem cors',
-                    corpo: JSON.stringificar({ ação: 'excluir', imagemUrl, nome de usuário: nome de usuário atual, ID do evento: evento atual })
+        async function deletePhoto(imageUrl) {
+            if (!confirm("Excluir?")) return;
+            try {
+                await fetch(GAS_WEBAPP_URL, {
+                    method: 'POST', mode: 'no-cors',
+                    body: JSON.stringify({ action: 'delete', imageUrl, userName: currentUserName, eventId: currentEvent })
                 });
-                atualizarFotos();
-            } pegar (errar) { alerta("Erro."); }
+                refreshPhotos();
+            } catch (err) { alert("Erro."); }
         }
-        assíncrono função handleUniqueIdSugestão() {
-            const entrada de ID = documento.obterElementoPorId('id do evento');
-            const res = esperar buscar(`${GAS_WEBAPP_URL}?eventoId=${entrada de ID.valor.aparar().para a caixa superior()}`);
-            const dados = esperar res.json();
-            se (dados.fotos && dados.fotos.comprimento > 0) {
-                const novoId = entrada de ID.valor.aparar().para a caixa superior() + Matemática.chão(Matemática.aleatório() * 100);
-                entrada de ID.valor = novoId; alerta("Sugestão: " + novoId);
-            } outro { alerta("Desonível!"); }
+        async function handleUniqueIdSuggestion() {
+            const idInput = document.getElementById('event-id');
+            const res = await fetch(`${GAS_WEBAPP_URL}?eventId=${idInput.value.trim().toUpperCase()}`);
+            const data = await res.json();
+            if (data.photos && data.photos.length > 0) {
+                const newId = idInput.value.trim().toUpperCase() + Math.floor(Math.random() * 100);
+                idInput.value = newId; alert("Sugestão: " + newId);
+            } else { alert("Disponível!"); }
         }
-    </roteiro>
-</corpo>
+    </script>
+</body>
 
-        </HTML>
+</html>
