@@ -55,12 +55,6 @@
             background: url('hero-bg.png') center/cover no-repeat;
             opacity: 0.4;
             filter: blur(5px);
-            transition: opacity 1s ease;
-        }
-
-        #gallery-screen .hero-bg {
-            opacity: 0.1;
-            filter: blur(10px);
         }
 
         /* Ajuste de legibilidade nos títulos */
@@ -476,8 +470,6 @@
         <div class="spinner"></div>
     </div>
 
-    <div class="hero-bg"></div>
-
     <div id="app">
         <header>
             <div class="logo">
@@ -495,6 +487,7 @@
 
         <!-- Join Screen -->
         <section id="join-screen">
+            <div class="hero-bg"></div>
             <div class="glass-card">
                 <h2 style="margin-bottom: 10px;">Bem-vindo ao Evento</h2>
                 <p style="color: var(--text-muted); margin-bottom: 30px;">Entre com o código do evento para começar a
