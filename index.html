@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PhotoShare | Eternize Momentos</title>
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#0f172a">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+
+    <!-- Google Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Poppins:wght@300;400;600&family=Montserrat:wght@300;400;700&family=Dancing+Script:wght@400..700&family=Roboto+Mono&family=Luckiest+Guy&family=Pacifico&family=Great+Vibes&family=Alex+Brush&family=Caveat:wght@400;700&family=Bebas+Neue&family=Indie+Flower&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap"
+        rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- QRCode Lib -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #ec4899;
+            --background: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.6);
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --accent: #00d2ff;
+        }
+
+        body {
+            background: var(--background);
+            color: var(--text);
+            min-height: 100vh;
+            font-family: 'Outfit', sans-serif;
+            overflow-x: hidden;
+            transition: background 0.5s ease, color 0.5s ease;
+            background-image: radial-gradient(circle at top right, rgba(99, 102, 241, 0.15), transparent),
+                radial-gradient(circle at bottom left, rgba(236, 72, 153, 0.15), transparent);
+            background-attachment: fixed;
+        }
+
+        /* Hero Background for Join Screen */
+        .hero-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: url('hero-bg.png') center/cover no-repeat;
+            opacity: 0.4;
+            filter: blur(5px);
+            transition: opacity 1s ease;
+        }
+
+        #gallery-screen .hero-bg {
+            opacity: 0.1;
+            filter: blur(10px);
+        }
+
+        /* Ajuste de legibilidade nos títulos */
+        h1,
+        h2,
+        h3,
+        span,
+        p {
+            color: var(--text);
+        }
+
+        /* Loading Overlay */
+        #loader {
+            position: fixed;
+            inset: 0;
+            background: var(--background);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            transition: opacity 0.5s ease;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid var(--glass);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* App Container */
+        #app {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        #app.loaded {
+            opacity: 1;
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            margin-bottom: 40px;
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Join Event Section */
+        #join-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 70vh;
+            text-align: center;
+        }
+
+        .glass-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 32px;
+            padding: 48px;
+            width: 100%;
+            max-width: 480px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+            animation: cardAppear 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes cardAppear {
+            from {
+                opacity: 0;
+                transform: translateY(30px) scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .input-group {
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        input {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 14px 16px;
+            color: white;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border-radius: 12px;
+            border: none;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -10px var(--primary);
+        }
+
+        /* Gallery Section */
+        #gallery-screen {
+            display: none;
+        }
+
+        .gallery-header {
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .event-info h1 {
+            font-size: 2rem;
+            margin-bottom: 5px;
+        }
+
+        .event-info p {
+            color: var(--text-muted);
+        }
+
+        .photo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            padding-bottom: 100px;
+        }
+
+        .event-banner-container {
+            width: 100%;
+            max-height: 300px;
+            border-radius: 20px;
+            overflow: hidden;
+            margin-bottom: 25px;
+            display: none;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .event-banner-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: var(--banner-pos, center);
+        }
+
+        .photo-card {
+            border-radius: 20px;
+            overflow: hidden;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            aspect-ratio: 1;
+            position: relative;
+            cursor: pointer;
+            animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .photo-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+            border-color: var(--primary);
+        }
+
+        .photo-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .photo-card:hover img {
+            transform: scale(1.1);
+        }
+
+        .photo-info {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 15px;
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .photo-card:hover .photo-info {
+            opacity: 1;
+        }
+
+        /* Floating Action Button */
+        .fab {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 30px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+            cursor: pointer;
+            z-index: 100;
+            transition: all 0.3s ease;
+        }
+
+        .fab:hover {
+            transform: scale(1.1) rotate(90deg);
+        }
+
+        /* Upload Modal */
+        #upload-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .upload-content {
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            width: 100%;
+            max-width: 500px;
+            padding: 30px;
+            position: relative;
+        }
+
+        .upload-area {
+            border: 2px dashed var(--glass-border);
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .upload-area:hover,
+        .upload-area.dragover {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .drop-icon {
+            color: var(--primary);
+            margin-bottom: 15px;
+        }
+
+        .preview-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .preview-img {
+            width: 100%;
+            aspect-ratio: 1;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: var(--glass);
+            border-radius: 3px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            display: none;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--primary);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        /* Lightbox */
+        #lightbox {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 2000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        #lightbox img {
+            max-width: 100%;
+            max-height: 100%;
+            border-radius: 8px;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+        }
+
+        .close-lightbox {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            cursor: pointer;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 640px) {
+            .gallery-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+
+            .glass-card {
+                padding: 25px;
+            }
+
+            .photo-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="loader">
+        <div class="spinner"></div>
+    </div>
+
+    <div class="hero-bg"></div>
+
+    <div id="app">
+        <header>
+            <div class="logo">
+                <i data-lucide="camera"></i>
+                <span>PhotoShare</span>
+            </div>
+            <div id="user-display" style="display: none; align-items: center; gap: 10px;">
+                <span id="display-name" style="color: var(--text-muted)"></span>
+                <button onclick="logout()" class="btn"
+                    style="width: auto; padding: 8px; background: transparent; color: var(--text-muted)">
+                    <i data-lucide="log-out"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Join Screen -->
+        <section id="join-screen">
+            <div class="glass-card">
+                <h2 style="margin-bottom: 10px;">Bem-vindo ao Evento</h2>
+                <p style="color: var(--text-muted); margin-bottom: 30px;">Entre com o código do evento para começar a
+                    compartilhar fotos.</p>
+
+                <div class="input-group">
+                    <label>Seu Nome</label>
+                    <input type="text" id="user-name" placeholder="Como você quer ser chamado?">
+                </div>
+
+                <div class="input-group">
+                    <label style="display: flex; justify-content: space-between; align-items: center;">
+                        Código do Evento
+                        <span onclick="handleUniqueIdSuggestion()"
+                            style="color: var(--primary); cursor: pointer; font-size: 0.75rem; font-weight: 600;">
+                            <i data-lucide="sparkles" size="12" style="display: inline; vertical-align: middle;"></i>
+                            Verificar / Gerar Único
+                        </span>
+                    </label>
+                    <input type="text" id="event-id" placeholder="Ex: CASAMENTO2024">
+                </div>
+
+                <div class="input-group">
+                    <label>Senha do Evento</label>
+                    <input type="password" id="event-pass" placeholder="Defina ou digite a senha">
+                </div>
+
+                <button onclick="joinEvent()" class="btn btn-primary">
+                    Acessar Galeria
+                    <i data-lucide="arrow-right"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- Gallery Screen -->
+        <section id="gallery-screen">
+            <div class="gallery-header">
+                <div class="event-info">
+                    <h1 id="event-title">Evento</h1>
+                    <p id="event-desc" style="margin-bottom: 5px; font-weight: 500; opacity: 0.9;"></p>
+                    <p id="photo-count" style="font-size: 0.85rem; opacity: 0.6;">Carregando fotos...</p>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button onclick="openConfigModal()" class="btn"
+                        style="width: auto; background: var(--glass); border: 1px solid var(--glass-border);">
+                        <i data-lucide="settings"></i>
+                    </button>
+                    <button onclick="openShareModal()" class="btn"
+                        style="width: auto; background: var(--glass); border: 1px solid var(--glass-border);">
+                        <i data-lucide="share-2"></i>
+                        Compartilhar
+                    </button>
+                    <button onclick="refreshPhotos()" class="btn"
+                        style="width: auto; background: var(--glass); border: 1px solid var(--glass-border);">
+                        <i data-lucide="refresh-cw"></i>
+                        Atualizar
+                    </button>
+                </div>
+            </div>
+
+            <div id="event-banner" class="event-banner-container"></div>
+
+            <div class="photo-grid" id="photo-grid">
+                <!-- Photos will be inserted here -->
+            </div>
+        </section>
+
+        <div class="fab" id="upload-fab" style="display: none;" onclick="openUploadModal()">
+            <i data-lucide="plus" size="32"></i>
+        </div>
+    </div>
+
+    <!-- Upload Modal -->
+    <div id="upload-modal" onclick="if(event.target == this) closeUploadModal()">
+        <div class="upload-content">
+            <h3 style="margin-bottom: 20px;">Enviar Fotos</h3>
+
+            <input type="file" id="file-input" multiple accept="image/*" style="display: none;"
+                onchange="handleFileSelect(event)">
+
+            <div class="upload-area" onclick="document.getElementById('file-input').click()" id="drop-zone">
+                <div class="drop-icon">
+                    <i data-lucide="upload-cloud" size="48"></i>
+                </div>
+                <p>Clique ou arraste fotos aqui</p>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 5px;">Máximo 10MB por foto</p>
+            </div>
+
+            <div class="preview-container" id="preview-container"></div>
+
+            <div class="progress-bar" id="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <button onclick="closeUploadModal()" class="btn" style="background: var(--glass);">Cancelar</button>
+                <button onclick="startUpload()" id="upload-btn" class="btn btn-primary" disabled>
+                    Enviar (<span id="file-count">0</span>)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Password Modal -->
+    <div id="password-modal" onclick="if(event.target == this) closePasswordModal()"
+        style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(8px); display: none; justify-content: center; align-items: center; z-index: 1200; padding: 20px;">
+        <div class="upload-content" style="max-width: 400px; text-align: center;">
+            <h3 style="margin-bottom: 20px;">Acesso Restrito</h3>
+            <p style="color: var(--text-muted); margin-bottom: 20px; font-size: 0.9rem;">Digite a senha do evento para
+                acessar as configurações.</p>
+            <div class="input-group">
+                <input type="password" id="admin-pass-input" placeholder="Senha do Evento"
+                    onkeyup="if(event.key === 'Enter') checkAdminPassword()"
+                    style="text-align: center; font-size: 1.2rem; letter-spacing: 4px;">
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button onclick="closePasswordModal()" class="btn" style="background: var(--glass);">Cancelar</button>
+                <button onclick="checkAdminPassword()" class="btn btn-primary">Acessar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Config Modal -->
+    <div id="config-modal" onclick="if(event.target == this) closeConfigModal()"
+        style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(8px); display: none; justify-content: center; align-items: center; z-index: 1100; padding: 20px;">
+        <div class="upload-content" style="max-width: 450px;">
+            <h3 style="margin-bottom: 20px;">Personalizar Evento</h3>
+
+            <div class="input-group">
+                <label>Descrição do Evento</label>
+                <input type="text" id="cfg-desc" placeholder="Ex: Sejam bem vindos ao nosso casamento!">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div class="input-group">
+                    <label>Cor Principal</label>
+                    <input type="color" id="cfg-primary" value="#6366f1" style="height: 45px; padding: 5px;">
+                </div>
+                <div class="input-group">
+                    <label>Cor de Fundo</label>
+                    <input type="color" id="cfg-bg" value="#0f172a" style="height: 45px; padding: 5px;">
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label>URL do Banner (Imagem)</label>
+                <input type="text" id="cfg-banner" placeholder="Link da imagem do banner">
+                <p style="font-size: 0.7rem; color: var(--text-muted); margin-top: 5px;">
+                    <i data-lucide="info" size="10" style="vertical-align: middle;"></i>
+                    Recomendado: 1200x300px (Proporção 4:1)
+                </p>
+            </div>
+
+            <div class="input-group">
+                <label>Foco do Recorte (Banner)</label>
+                <select id="cfg-banner-pos"
+                    style="width: 100%; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--glass-border); border-radius: 12px; padding: 12px; color: white;">
+                    <option value="center">Centro (Padrão)</option>
+                    <option value="top">Topo</option>
+                    <option value="bottom">Base</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label>Fonte</label>
+                <select id="cfg-font"
+                    style="width: 100%; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--glass-border); border-radius: 12px; padding: 12px; color: white;">
+                    <option value="'Outfit', sans-serif">Outfit (Padrão)</option>
+                    <option value="'Playfair Display', serif">Clássico / Elegante (Serif)</option>
+                    <option value="'Poppins', sans-serif">Clean / Moderno (Poppins)</option>
+                    <option value="'Montserrat', sans-serif">Geométrico (Montserrat)</option>
+                    <option value="'Dancing Script', cursive">Romântico (Dancing)</option>
+                    <option value="'Roboto Mono', monospace">Tecnológico (Mono)</option>
+                    <option value="'Luckiest Guy', cursive">Carnaval (Luckiest Guy)</option>
+                    <option value="'Pacifico', cursive">Festa / Divertido (Pacifico)</option>
+                    <option value="'Great Vibes', cursive">Casamento (Great Vibes)</option>
+                    <option value="'Alex Brush', cursive">Noivado / Delicado (Alex Brush)</option>
+                    <option value="'Caveat', cursive">Viagem / Casual (Caveat)</option>
+                    <option value="'Bebas Neue', sans-serif">Rua / Urbano (Bebas Neue)</option>
+                    <option value="'Indie Flower', cursive">Casa / Aconchegante (Indie Flower)</option>
+                    <option value="'Libre Baskerville', serif">Formatura / Solene</option>
+                </select>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button onclick="closeConfigModal()" class="btn" style="background: var(--glass);">Cancelar</button>
+                <button onclick="applyCustomization()" class="btn btn-primary">Salvar Alterações</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Share Modal -->
+    <div id="share-modal" onclick="if(event.target == this) closeShareModal()"
+        style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(8px); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 20px;">
+        <div class="upload-content" style="text-align: center; max-width: 400px;">
+            <h3 style="margin-bottom: 20px;">Compartilhar Evento</h3>
+
+            <div id="qrcode"
+                style="display: flex; justify-content: center; margin-bottom: 20px; background: white; padding: 20px; border-radius: 16px; width: fit-content; margin-left: auto; margin-right: auto;">
+            </div>
+
+            <div class="input-group">
+                <label>Link Direto</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="share-url" readonly style="flex: 1; font-size: 0.8rem;">
+                    <button onclick="copyShareUrl()" class="btn btn-primary" style="width: 45px; padding: 0;">
+                        <i data-lucide="copy" size="18"></i>
+                    </button>
+                </div>
+            </div>
+
+            <button onclick="closeShareModal()" class="btn"
+                style="background: var(--glass); margin-top: 10px;">Fechar</button>
+        </div>
+    </div>
+
+    <!-- Lightbox -->
+    <div id="lightbox" onclick="this.style.display='none'">
+        <i data-lucide="x" class="close-lightbox" size="32"></i>
+        <img id="lightbox-img" src="" alt="Full view">
+    </div>
+
+    <script>
+        // PWA Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('SW Registered', reg))
+                    .catch(err => console.error('SW Registration Failed', err));
+            });
+        }
+
+        // CONFIGURATION
+        const CLOUDINARY_CLOUD_NAME = 'dzql3w87i';
+        const CLOUDINARY_UPLOAD_PRESET = 'dados_eventos';
+        const GAS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxKu6wbrt6X8xnHQqsw6dTVza-BnGSXpgaiZO8aUzXy_89TrxurmQ58V-DVY98NKPvMmw/exec';
+
+        let currentEvent = null;
+        let currentUserName = null;
+        let currentEventPass = null;
+        let selectedFiles = [];
+        let isUploading = false;
+
+        // Initialize Lucide Icons
+        lucide.createIcons();
+
+        // Handle Loader
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const loader = document.getElementById('loader');
+                if (loader) {
+                    loader.style.opacity = '0';
+                    setTimeout(() => {
+                        loader.style.display = 'none';
+                        document.getElementById('app').classList.add('loaded');
+                    }, 500);
+                }
+            }, 1000);
+
+            // Perfil de URL (Auto-preenchimento)
+            const urlParams = new URLSearchParams(window.location.search);
+            const eventParam = urlParams.get('event');
+            const pwdParam = urlParams.get('pwd');
+
+            if (eventParam) {
+                const eventInput = document.getElementById('event-id');
+                eventInput.value = eventParam.toUpperCase();
+                eventInput.readOnly = true;
+                eventInput.style.opacity = '0.7';
+            }
+
+            if (pwdParam) {
+                try {
+                    // Decodifica a senha do URL (Base64) para proteger visualmente
+                    const decodedPass = atob(pwdParam);
+                    const pwdInput = document.getElementById('event-pass');
+                    pwdInput.value = decodedPass;
+                    pwdInput.readOnly = true;
+                    pwdInput.style.opacity = '0.7';
+
+                    // IMPORTANTE: Limpa o nome para que o novo usuário preencha o próprio
+                    document.getElementById('user-name').value = '';
+                } catch (e) {
+                    console.error("Erro ao decodificar senha do URL:", e);
+                }
+            }
+
+            // Cache Local
+            const savedEvent = localStorage.getItem('photoEvent');
+            const savedUser = localStorage.getItem('photoUser');
+            const savedPass = localStorage.getItem('photoPass');
+            if (savedEvent && savedUser && savedPass) {
+                document.getElementById('event-id').value = savedEvent;
+                document.getElementById('user-name').value = savedUser;
+                document.getElementById('event-pass').value = savedPass;
+            }
+        });
+
+        async function joinEvent() {
+            const eventId = document.getElementById('event-id').value.trim().toUpperCase();
+            const eventPass = String(document.getElementById('event-pass').value).trim();
+            const userName = document.getElementById('user-name').value.trim();
+
+            if (!eventId || !userName || !eventPass) {
+                alert('Por favor, preencha nome, código e senha do evento.');
+                return;
+            }
+
+            const btn = document.querySelector('#join-screen .btn-primary');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="spinner" style="width:16px; height:16px; border-width:2px; display:inline-block;"></i> Verificando...';
+
+            try {
+                const response = await fetch(`${GAS_WEBAPP_URL}?eventId=${eventId}`);
+                const result = await response.json();
+
+                // VALIDAÇÃO DE SENHA (Correção definitiva: comparação entre strings limpas)
+                const storedPass = result.password ? String(result.password).trim() : '';
+                const enteredPass = String(eventPass).trim();
+
+                if (storedPass !== '' && storedPass !== enteredPass) {
+                    alert('Senha incorreta para este evento. Tente novamente.');
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                    return;
+                }
+
+                currentEvent = eventId;
+                currentUserName = userName;
+                currentEventPass = eventPass;
+
+                localStorage.setItem('photoEvent', eventId);
+                localStorage.setItem('photoUser', userName);
+                localStorage.setItem('photoPass', eventPass);
+
+                if (result.config) applyStylesLocally(result.config);
+
+                document.getElementById('join-screen').style.display = 'none';
+                document.getElementById('gallery-screen').style.display = 'block';
+                document.getElementById('upload-fab').style.display = 'flex';
+                document.getElementById('user-display').style.display = 'flex';
+                document.getElementById('display-name').textContent = userName;
+                document.getElementById('event-title').textContent = eventId;
+
+                processPhotos(result.photos);
+
+            } catch (err) {
+                console.error(err);
+                alert('Erro ao conectar com o servidor. Verifique o link do Apps Script.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                lucide.createIcons();
+            }
+        }
+
+        function logout() {
+            localStorage.clear();
+            location.reload();
+        }
+
+        async function refreshPhotos() {
+            if (!currentEvent) return;
+            const countLabel = document.getElementById('photo-count');
+            countLabel.textContent = "Buscando fotos...";
+
+            try {
+                const response = await fetch(`${GAS_WEBAPP_URL}?eventId=${currentEvent}`);
+                const result = await response.json();
+                if (result.config) applyStylesLocally(result.config);
+                processPhotos(result.photos);
+            } catch (err) {
+                console.error(err);
+                countLabel.textContent = "Erro ao carregar fotos.";
+            }
+        }
+
+        function processPhotos(photos) {
+            const grid = document.getElementById('photo-grid');
+            const countLabel = document.getElementById('photo-count');
+            grid.innerHTML = '';
+
+            if (!photos) photos = [];
+            countLabel.textContent = `${photos.length} fotos compartilhadas`;
+
+            if (photos.length === 0) {
+                grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 100px 20px; color: var(--text-muted);">
+                    <i data-lucide="image-off" size="48" style="margin-bottom: 20px; opacity: 0.3;"></i>
+                    <p>Nenhuma foto ainda. Seja o primeiro a postar!</p>
+                </div>`;
+                lucide.createIcons();
+                return;
+            }
+
+            photos.reverse().forEach(photo => {
+                const isOwner = photo.userName === currentUserName;
+                const card = document.createElement('div');
+                card.className = 'photo-card';
+                card.innerHTML = `
+                        <img src="${photo.imageUrl.replace('/upload/', '/upload/w_1000,c_limit,q_auto,f_auto/')}" loading="lazy" onclick="openLightbox('${photo.imageUrl}')">
+                        <div class="photo-info" style="opacity: 1; pointer-events: auto;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                                <div>
+                                    <p style="font-weight: 600; font-size: 0.9rem;">${photo.userName || 'Anônimo'}</p>
+                                    <p style="font-size: 0.7rem; opacity: 0.8;">${new Date(photo.Timestamp).toLocaleString()}</p>
+                                </div>
+                                <div style="display: flex; gap: 5px;">
+                                    ${isOwner ? `
+                                        <button onclick="deletePhoto('${photo.imageUrl}')" style="color: #ef4444; background: rgba(255,255,255,0.2); backdrop-filter: blur(4px); padding: 8px; border-radius: 10px; border: none; display: flex; cursor: pointer;">
+                                            <i data-lucide="trash-2" size="18"></i>
+                                        </button>
+                                    ` : ''}
+                                    <button onclick="window.open('${photo.imageUrl}', '_blank')" style="color: white; background: rgba(255,255,255,0.2); backdrop-filter: blur(4px); padding: 8px; border-radius: 10px; border: none; display: flex; cursor: pointer;">
+                                        <i data-lucide="download" size="18"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                `;
+                grid.appendChild(card);
+            });
+            lucide.createIcons();
+        }
+
+        async function startUpload() {
+            if (isUploading || selectedFiles.length === 0) return;
+            isUploading = true;
+            const btn = document.getElementById('upload-btn');
+            const progressFill = document.getElementById('progress-fill');
+            const originalBtnText = btn.innerHTML;
+
+            btn.disabled = true;
+            btn.innerHTML = 'Enviando...';
+            document.getElementById('progress-bar').style.display = 'block';
+
+            let successCount = 0;
+            for (let i = 0; i < selectedFiles.length; i++) {
+                const file = selectedFiles[i];
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
+                    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const uploadData = await res.json();
+
+                    if (uploadData.secure_url) {
+                        await fetch(GAS_WEBAPP_URL, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                eventId: currentEvent,
+                                imageUrl: uploadData.secure_url,
+                                userName: currentUserName,
+                                password: currentEventPass
+                            })
+                        });
+                        successCount++;
+                    }
+                } catch (err) { console.error(err); }
+                progressFill.style.width = `${((i + 1) / selectedFiles.length) * 100}%`;
+            }
+
+            isUploading = false;
+            btn.disabled = false;
+            btn.innerHTML = originalBtnText;
+            alert(`${successCount} fotos enviadas com sucesso!`);
+            closeUploadModal();
+            refreshPhotos();
+        }
+
+        // --- Personalização ---
+        function applyStylesLocally(config) {
+            if (!config) return;
+            const root = document.documentElement;
+            if (config.primary) root.style.setProperty('--primary', config.primary);
+            if (config.bg) {
+                root.style.setProperty('--background', config.bg);
+                const isLight = isColorLight(config.bg);
+                // Ajuste de contraste agressivo para garantir legibilidade
+                root.style.setProperty('--text', isLight ? '#000000' : '#ffffff');
+                root.style.setProperty('--text-muted', isLight ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)');
+            }
+            if (config.font) document.body.style.fontFamily = config.font;
+            if (config.desc) document.getElementById('event-desc').textContent = config.desc;
+
+            // Banner logic
+            const bannerContainer = document.getElementById('event-banner');
+            if (config.banner) {
+                bannerContainer.innerHTML = `<img src="${config.banner}" alt="Banner do Evento">`;
+                bannerContainer.style.display = 'block';
+                if (config.bannerPos) {
+                    root.style.setProperty('--banner-pos', config.bannerPos);
+                }
+            } else {
+                bannerContainer.style.display = 'none';
+            }
+
+            // Sincroniza inputs do modal
+            if (document.getElementById('cfg-desc')) document.getElementById('cfg-desc').value = config.desc || "";
+            if (document.getElementById('cfg-banner')) document.getElementById('cfg-banner').value = config.banner || "";
+            if (document.getElementById('cfg-banner-pos')) document.getElementById('cfg-banner-pos').value = config.bannerPos || "center";
+            if (document.getElementById('cfg-primary')) document.getElementById('cfg-primary').value = config.primary || "#6366f1";
+            if (document.getElementById('cfg-bg')) document.getElementById('cfg-bg').value = config.bg || "#0f172a";
+            if (document.getElementById('cfg-font')) document.getElementById('cfg-font').value = config.font || "'Outfit', sans-serif";
+        }
+
+        async function applyCustomization() {
+            const btn = document.querySelector('#config-modal .btn-primary');
+            const config = {
+                primary: document.getElementById('cfg-primary').value,
+                bg: document.getElementById('cfg-bg').value,
+                font: document.getElementById('cfg-font').value,
+                desc: document.getElementById('cfg-desc').value,
+                banner: document.getElementById('cfg-banner').value,
+                bannerPos: document.getElementById('cfg-banner-pos').value
+            };
+            applyStylesLocally(config);
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = "Salvando...";
+            try {
+                await fetch(GAS_WEBAPP_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify({ action: 'saveConfig', eventId: currentEvent, config: config })
+                });
+                alert("Salvo!");
+                closeConfigModal();
+            } catch (err) { alert("Erro ao salvar."); }
+            finally { btn.disabled = false; btn.textContent = originalText; }
+        }
+
+        function isColorLight(color) {
+            if (!color || color.indexOf('#') !== 0) return false;
+            const hex = color.replace('#', '');
+            if (hex.length < 6) return false;
+            const r = parseInt(hex.substr(0, 2), 16);
+            const g = parseInt(hex.substr(2, 2), 16);
+            const b = parseInt(hex.substr(4, 2), 16);
+            return ((r * 299) + (g * 587) + (b * 114)) / 1000 > 155;
+        }
+
+        // --- Utils de UI ---
+        function openUploadModal() { document.getElementById('upload-modal').style.display = 'flex'; }
+        function closeUploadModal() { if (!isUploading) document.getElementById('upload-modal').style.display = 'none'; resetUpload(); }
+        function resetUpload() { selectedFiles = []; document.getElementById('preview-container').innerHTML = ''; document.getElementById('upload-btn').disabled = true; document.getElementById('file-count').textContent = '0'; }
+        function handleFileSelect(e) { selectedFiles = [...selectedFiles, ...Array.from(e.target.files)]; updatePreview(); }
+        function updatePreview() {
+            const container = document.getElementById('preview-container');
+            container.innerHTML = '';
+            selectedFiles.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = document.createElement('img');
+                    img.src = e.target.result; img.className = 'preview-img';
+                    container.appendChild(img);
+                };
+                reader.readAsDataURL(file);
+            });
+            document.getElementById('upload-btn').disabled = selectedFiles.length === 0;
+            document.getElementById('file-count').textContent = selectedFiles.length;
+        }
+        function openLightbox(url) { document.getElementById('lightbox-img').src = url; document.getElementById('lightbox').style.display = 'flex'; }
+        function closeConfigModal() { document.getElementById('config-modal').style.display = 'none'; }
+        function closePasswordModal() {
+            document.getElementById('password-modal').style.display = 'none';
+            document.getElementById('admin-pass-input').value = '';
+        }
+        function openConfigModal() {
+            document.getElementById('password-modal').style.display = 'flex';
+            setTimeout(() => document.getElementById('admin-pass-input').focus(), 100);
+        }
+        function checkAdminPassword() {
+            const pass = document.getElementById('admin-pass-input').value;
+            if (pass === currentEventPass) {
+                closePasswordModal();
+                document.getElementById('config-modal').style.display = 'flex';
+            } else {
+                alert("Senha do evento incorreta.");
+                document.getElementById('admin-pass-input').value = '';
+            }
+        }
+        function closeShareModal() { document.getElementById('share-modal').style.display = 'none'; }
+        function openShareModal() {
+            const modal = document.getElementById('share-modal');
+            const url = new URL(window.location.href);
+            url.searchParams.set('event', currentEvent);
+
+            // "Criptografa" (Codifica em Base64) a senha para não ficar visível no link
+            const encodedPass = btoa(currentEventPass);
+            url.searchParams.set('pwd', encodedPass);
+
+            const fullUrl = url.toString();
+            document.getElementById('share-url').value = fullUrl;
+            modal.style.display = 'flex';
+            document.getElementById('qrcode').innerHTML = '';
+            new QRCode(document.getElementById('qrcode'), { text: fullUrl, width: 200, height: 200 });
+        }
+        function copyShareUrl() {
+            const input = document.getElementById('share-url');
+            input.select();
+            navigator.clipboard.writeText(input.value);
+            alert("Link copiado!");
+        }
+        async function deletePhoto(imageUrl) {
+            if (!confirm("Excluir?")) return;
+            try {
+                await fetch(GAS_WEBAPP_URL, {
+                    method: 'POST', mode: 'no-cors',
+                    body: JSON.stringify({ action: 'delete', imageUrl, userName: currentUserName, eventId: currentEvent })
+                });
+                refreshPhotos();
+            } catch (err) { alert("Erro."); }
+        }
+        async function handleUniqueIdSuggestion() {
+            const idInput = document.getElementById('event-id');
+            const res = await fetch(`${GAS_WEBAPP_URL}?eventId=${idInput.value.trim().toUpperCase()}`);
+            const data = await res.json();
+            if (data.photos && data.photos.length > 0) {
+                const newId = idInput.value.trim().toUpperCase() + Math.floor(Math.random() * 100);
+                idInput.value = newId; alert("Sugestão: " + newId);
+            } else { alert("Disponível!"); }
+        }
+    </script>
+</body>
+
+</html>
