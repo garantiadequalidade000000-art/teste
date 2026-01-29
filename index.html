@@ -12,7 +12,7 @@
 
     <!-- Google Fonts -->
     <link
-        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Michroma&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Poppins:wght@300;400;600&family=Montserrat:wght@300;400;700&family=Dancing+Script:wght@400..700&family=Roboto+Mono&family=Luckiest+Guy&family=Pacifico&family=Great+Vibes&family=Alex+Brush&family=Caveat:wght@400;700&family=Bebas+Neue&family=Indie+Flower&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Michroma&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Poppins:wght@300;400;600&family=Montserrat:wght@300;400;700&family=Dancing+Script:wght@400..700&family=Roboto+Mono&family=Luckiest+Guy&family=Pacifico&family=Great+Vibes&family=Alex+Brush&family=Caveat:wght@400;700&family=Bebas+Neue&family=Indie+Flower&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Syncopate:wght@400;700&display=swap"
         rel="stylesheet">
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -44,7 +44,7 @@
             background-attachment: fixed;
         }
 
-        #join-screen::before {
+        body.is-home #join-screen::before {
             content: "";
             position: fixed;
             top: 0;
@@ -189,14 +189,16 @@
         }
 
         .logo-text {
-            font-size: 2.5rem;
+            font-family: 'Syncopate', sans-serif;
+            font-size: 3rem;
             font-weight: 700;
-            letter-spacing: 5px;
+            letter-spacing: 12px;
             text-transform: uppercase;
-            background: linear-gradient(to right, var(--primary), var(--secondary));
+            background: linear-gradient(to right, var(--primary), var(--accent), var(--secondary));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            filter: drop-shadow(0 0 10px rgba(99, 102, 241, 0.5));
+            filter: drop-shadow(0 0 15px rgba(99, 102, 241, 0.4));
+            margin-top: 20px;
         }
 
         .glass-card {
@@ -807,6 +809,7 @@
 
         // Handle Loader
         window.addEventListener('load', () => {
+            document.body.classList.add('is-home'); // Adiciona a classe da tela inicial
             setTimeout(() => {
                 const loader = document.getElementById('loader');
                 if (loader) {
@@ -897,6 +900,7 @@
 
                 if (result.config) applyStylesLocally(result.config);
 
+                document.body.classList.remove('is-home'); // Remove o fundo da tela inicial ao entrar na galeria
                 document.getElementById('join-screen').style.display = 'none';
                 document.getElementById('gallery-screen').style.display = 'block';
                 document.getElementById('upload-fab').style.display = 'flex';
