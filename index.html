@@ -44,7 +44,6 @@
             background-attachment: fixed;
         }
 
-        /* Hero Background for Join Screen */
         .hero-bg {
             position: fixed;
             top: 0;
@@ -55,6 +54,12 @@
             background: url('hero-bg.png') center/cover no-repeat;
             opacity: 0.4;
             filter: blur(5px);
+            transition: opacity 0.5s ease;
+        }
+
+        body.in-event .hero-bg {
+            display: none;
+            opacity: 0;
         }
 
         /* Ajuste de legibilidade nos títulos */
@@ -470,6 +475,8 @@
         <div class="spinner"></div>
     </div>
 
+    <div class="hero-bg"></div>
+
     <div id="app">
         <header>
             <div class="logo">
@@ -487,7 +494,6 @@
 
         <!-- Join Screen -->
         <section id="join-screen">
-            <div class="hero-bg"></div>
             <div class="glass-card">
                 <h2 style="margin-bottom: 10px;">Bem-vindo ao Evento</h2>
                 <p style="color: var(--text-muted); margin-bottom: 30px;">Entre com o código do evento para começar a
@@ -826,6 +832,7 @@
 
                 if (result.config) applyStylesLocally(result.config);
 
+                document.body.classList.add('in-event');
                 document.getElementById('join-screen').style.display = 'none';
                 document.getElementById('gallery-screen').style.display = 'block';
                 document.getElementById('upload-fab').style.display = 'flex';
@@ -847,6 +854,7 @@
 
         function logout() {
             localStorage.clear();
+            document.body.classList.remove('in-event');
             location.reload();
         }
 
